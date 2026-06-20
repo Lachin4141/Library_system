@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+
+# Переменные окружения и секреты
+.env
+.env.*
+
+# Базы данных (локальный SQLite)
+*.db
+*.sqlite3
+
+# Данные датасета (слишком большие/лишние для git, кладём только cleaned-версию вручную при необходимости)
+backend/data/*.csv
+
+# Alembic
+# (версии миграций оставляем в git, кэш — нет)
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# Логи
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Frontend (Node/React)
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+npm-debug.log*
