@@ -1,1 +1,83 @@
-{\rtf1}
+
+
+# ── Library Management System — docker-compose.yml ──────────────────────────
+#
+# Three services:
+#   db       — PostgreSQL 16 database
+#   backend  — FastAPI app (uvicorn), depends on db
+#   frontend — nginx serving index.html, proxies /api/* → backend
+#
+# Quick start:
+#   docker-compose up --build
+#
+# First run only — seed the book catalogue and create the admin account:
+#   docker-compose exec backend python scripts/seed_books.py
+#   docker-compose exec backend python scripts/create_admin.py
+#
+# URLs after startup:
+#   Frontend UI  →  http://localhost:80
+#   Swagger docs →  http://localhost:8000/docs
+#   API direct   →  http://localhost:8000
+# ----------------------------------------------------------------------------
+
+services:
+
+  # ── 1. PostgreSQL database ────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: library_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-library_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-library_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-library_db}
+    volumes:
+      # Named volume → data survives container restarts
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Expose on host for direct DB access with a GUI (e.g. DBeaver, pgAdmin)
+      # Remove this port mapping in production.
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-library_user} -d ${POSTGRES_DB:-library_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── 2. FastAPI backend ────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend          # build context = backend/ folder
+      dockerfile: Dockerfile      # backend/Dockerfile
+    container_name: library_backend
+    restart: unless-stopped
+    environment:
+      # SQLAlchemy connection string — overrides the SQLite default in database.py
+      DATABASE_URL: postgresql://${POSTGRES_USER:-library_user}:${POSTGRES_PASSWORD:-library_pass}@db:5432/${POSTGRES_DB:-library_db}
+      # JWT secret — CHANGE THIS before deploying to production!
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-super-secret-change-me-in-production}
+    volumes:
+      # Mount source code for live-reload during development.
+      # Comment out in production to use the image's built-in copy.
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy   # wait until postgres passes its healthcheck
+
+  # ── 3. nginx frontend ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend          # build context = frontend/ folder
+      dockerfile: Dockerfile       # frontend/Dockerfile
+    container_name: library_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend                    # backend must be up before nginx starts proxying
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
