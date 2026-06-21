@@ -14,6 +14,7 @@ from database import Base, engine
 import models  # noqa: F401  — импорт нужен, чтобы модели зарегистрировались в Base.metadata
 from routers import auth as auth_router
 from routers import books as books_router
+from routers import borrow as borrow_router
 
 app = FastAPI(
     title="Library Management System API",
@@ -50,6 +51,7 @@ def health():
 # Роутеры подключаем по мере готовности (Этапы 5-9 плана):
 app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
 app.include_router(books_router.router, prefix="/books", tags=["books"])
+app.include_router(borrow_router.router, tags=["borrow"])
 
 # from routers import borrow, reservations, reports
 # app.include_router(borrow.router, tags=["borrow"])
