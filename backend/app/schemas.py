@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from datetime import date
 
-from models import RoleEnum, BorrowStatus
+from models import RoleEnum, BorrowStatus, ReservationStatus
 
 
 # ---------- Auth / Users ----------
@@ -104,3 +104,24 @@ class BorrowTransactionOut(BaseModel):
 class BorrowHistoryOut(BaseModel):
     total: int
     items: list[BorrowTransactionOut]
+    
+# ---------- Reservations ----------
+
+class ReservationRequest(BaseModel):
+    isbn: str = Field(..., min_length=1, max_length=20)
+
+
+class ReservationOut(BaseModel):
+    reservation_id: int
+    user_id: int
+    isbn: str
+    reservation_date: date
+    status: ReservationStatus
+
+    class Config:
+        from_attributes = True
+
+
+class ReservationListOut(BaseModel):
+    total: int
+    items: list[ReservationOut]

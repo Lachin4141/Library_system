@@ -17,6 +17,7 @@ from database import get_db
 from models import Book, BorrowTransaction, BorrowStatus, User
 from schemas import BorrowRequest, ReturnRequest, BorrowTransactionOut, BorrowHistoryOut
 from auth.dependencies import get_current_user
+from routers.reservations import fulfill_oldest_pending_reservation
 
 router = APIRouter()
 
@@ -32,8 +33,9 @@ def borrow_book(
 ):
     """Выдать книгу текущему пользователю, если есть доступные экземпляры."""
     book = db.query(Book).filter(Book.isbn == payload.isbn).first()
-    if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
+    if book:
+        book.available_copies = min(book.total_copies, book.available_copies + 1)
+        fulfill_oldest_pending_reservation(db, payload.isbn)
 
     if book.available_copies <= 0:
         raise HTTPException(
