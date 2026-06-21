@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 import models  # noqa: F401  — импорт нужен, чтобы модели зарегистрировались в Base.metadata
 from routers import auth as auth_router
+from routers import books as books_router
 
 app = FastAPI(
     title="Library Management System API",
@@ -48,9 +49,9 @@ def health():
 
 # Роутеры подключаем по мере готовности (Этапы 5-9 плана):
 app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
+app.include_router(books_router.router, prefix="/books", tags=["books"])
 
-# from routers import books, borrow, reservations, reports
-# app.include_router(books.router, prefix="/books", tags=["books"])
+# from routers import borrow, reservations, reports
 # app.include_router(borrow.router, tags=["borrow"])
 # app.include_router(reservations.router, prefix="/reservations", tags=["reservations"])
 # app.include_router(reports.router, prefix="/reports", tags=["reports"])
