@@ -1,43 +1,43 @@
 """
-Загружает cleaned_books.csv в таблицу Books через SQLAlchemy.
-
-Запуск (из папки backend/scripts):
+Loads cleaned_books.csv into the Books table via SQLAlchemy.
+ 
+Usage (from the backend/scripts folder):
     python seed_books.py
 """
-
+ 
 import sys
 from pathlib import Path
 import pandas as pd
-
-# Абсолютный путь к backend/app, независимо от того, откуда запущен скрипт.
+ 
+# Absolute path to backend/app, regardless of where the script is run from.
 APP_DIR = (Path(__file__).resolve().parent.parent / "app")
-
-print(f"Ищу models.py и database.py в: {APP_DIR}")
-print(f"models.py существует: {(APP_DIR / 'models.py').exists()}")
-print(f"database.py существует: {(APP_DIR / 'database.py').exists()}")
-
-# insert(0, ...) — ставим путь в начало, чтобы он проверялся первым.
+ 
+print(f"Looking for models.py and database.py in: {APP_DIR}")
+print(f"models.py exists: {(APP_DIR / 'models.py').exists()}")
+print(f"database.py exists: {(APP_DIR / 'database.py').exists()}")
+ 
+# insert(0, ...) — put the path first so it's checked before anything else.
 sys.path.insert(0, str(APP_DIR))
-
+ 
 from database import Base, engine, SessionLocal  # noqa: E402
 from models import Book  # noqa: E402
-
+ 
 CLEANED_FILE = "../data/cleaned_books.csv"
-
-
+ 
+ 
 def main():
-    # Создаём таблицы, если их ещё нет
+    # Create tables if they don't exist yet
     Base.metadata.create_all(bind=engine)
-
+ 
     df = pd.read_csv(CLEANED_FILE)
     db = SessionLocal()
-
+ 
     inserted, skipped = 0, 0
     for _, row in df.iterrows():
         if db.query(Book).filter(Book.isbn == row["isbn"]).first():
             skipped += 1
             continue
-
+ 
         book = Book(
             isbn=row["isbn"],
             title=row["title"],
@@ -49,16 +49,16 @@ def main():
         )
         db.add(book)
         inserted += 1
-
-        # Коммитим пачками, чтобы не держать гигантскую транзакцию в памяти
+ 
+        # Commit in batches to avoid holding one giant transaction in memory
         if inserted % 1000 == 0:
             db.commit()
-            print(f"  ...добавлено {inserted}")
-
+            print(f"  ...inserted {inserted}")
+ 
     db.commit()
     db.close()
-    print(f"Готово. Добавлено: {inserted}, пропущено (уже существовали): {skipped}")
-
-
+    print(f"Done. Inserted: {inserted}, skipped (already existed): {skipped}")
+ 
+ 
 if __name__ == "__main__":
     main()

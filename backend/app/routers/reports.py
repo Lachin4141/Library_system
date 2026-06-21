@@ -1,22 +1,22 @@
 """
-Эндпоинты отчётов и аналитики (reports.py).
-
-GET /reports/most-borrowed       — топ книг по числу выдач
-GET /reports/active-users        — самые активные пользователи по числу выдач
-GET /reports/currently-borrowed  — книги, которые сейчас на руках
-GET /reports/overdue             — просроченные выдачи (и попутно обновляет их статус)
-GET /reports/monthly-stats       — статистика выдач по месяцам
-
-Весь роутер доступен только Administrator и Librarian (dependencies на уровне router).
-Кладите этот файл в backend/app/routers/reports.py
+Reporting and analytics endpoints (reports.py).
+ 
+GET /reports/most-borrowed       — top books by number of loans
+GET /reports/active-users        — most active users by number of loans
+GET /reports/currently-borrowed  — books that are currently checked out
+GET /reports/overdue             — overdue loans (and updates their status along the way)
+GET /reports/monthly-stats       — loan statistics by month
+ 
+The entire router is available only to Administrator and Librarian (dependencies at the router level).
+Place this file at backend/app/routers/reports.py
 """
-
+ 
 from datetime import date
-
+ 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
-
+ 
 from database import get_db
 from models import Book, User, BorrowTransaction, BorrowStatus, RoleEnum
 from schemas import (
@@ -32,18 +32,18 @@ from schemas import (
     MonthlyStatItem,
 )
 from auth.dependencies import require_role
-
+ 
 router = APIRouter(
     dependencies=[Depends(require_role(RoleEnum.administrator, RoleEnum.librarian))]
 )
-
-
+ 
+ 
 @router.get("/reports/most-borrowed", response_model=MostBorrowedListOut)
 def most_borrowed_books(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """Книги, отсортированные по количеству выдач (по убыванию)."""
+    """Books sorted by number of loans (descending)."""
     rows = (
         db.query(
             Book.isbn,
@@ -58,14 +58,14 @@ def most_borrowed_books(
     )
     items = [MostBorrowedItem(isbn=r.isbn, title=r.title, borrow_count=r.borrow_count) for r in rows]
     return MostBorrowedListOut(items=items)
-
-
+ 
+ 
 @router.get("/reports/active-users", response_model=ActiveUsersListOut)
 def active_users(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """Пользователи, отсортированные по количеству выдач (по убыванию)."""
+    """Users sorted by number of loans (descending)."""
     rows = (
         db.query(
             User.user_id,
@@ -84,11 +84,11 @@ def active_users(
         for r in rows
     ]
     return ActiveUsersListOut(items=items)
-
-
+ 
+ 
 @router.get("/reports/currently-borrowed", response_model=CurrentlyBorrowedListOut)
 def currently_borrowed(db: Session = Depends(get_db)):
-    """Все книги, которые прямо сейчас на руках (status borrowed или overdue)."""
+    """All books that are currently checked out (status borrowed or overdue)."""
     rows = (
         db.query(BorrowTransaction, User.full_name, Book.title)
         .join(User, User.user_id == BorrowTransaction.user_id)
@@ -110,19 +110,19 @@ def currently_borrowed(db: Session = Depends(get_db)):
         for t, full_name, title in rows
     ]
     return CurrentlyBorrowedListOut(total=len(items), items=items)
-
-
+ 
+ 
 @router.get("/reports/overdue", response_model=OverdueListOut)
 def overdue_books(db: Session = Depends(get_db)):
     """
-    Просроченные выдачи: due_date в прошлом, книга ещё не возвращена.
-
-    Перед выборкой "лениво" обновляет статус с borrowed на overdue для всех
-    транзакций, у которых due_date уже прошёл — так статус в БД остаётся
-    актуальным при каждом обращении к отчёту, без отдельного cron/scheduler.
+    Overdue loans: due_date is in the past, the book hasn't been returned yet.
+ 
+    Before querying, "lazily" updates the status from borrowed to overdue for all
+    transactions whose due_date has already passed — this keeps the status in the
+    DB up to date on every call to this report, without a separate cron/scheduler.
     """
     today = date.today()
-
+ 
     stale = (
         db.query(BorrowTransaction)
         .filter(
@@ -135,7 +135,7 @@ def overdue_books(db: Session = Depends(get_db)):
         t.status = BorrowStatus.overdue
     if stale:
         db.commit()
-
+ 
     rows = (
         db.query(BorrowTransaction, User.full_name, Book.title)
         .join(User, User.user_id == BorrowTransaction.user_id)
@@ -158,11 +158,11 @@ def overdue_books(db: Session = Depends(get_db)):
         for t, full_name, title in rows
     ]
     return OverdueListOut(total=len(items), items=items)
-
-
+ 
+ 
 @router.get("/reports/monthly-stats", response_model=MonthlyStatsListOut)
 def monthly_stats(db: Session = Depends(get_db)):
-    """Количество выдач по месяцам (год + месяц), по возрастанию даты."""
+    """Number of loans per month (year + month), in ascending date order."""
     rows = (
         db.query(
             extract("year", BorrowTransaction.borrow_date).label("year"),

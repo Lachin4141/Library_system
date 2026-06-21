@@ -1,23 +1,23 @@
 """
-Очистка books.csv (Book-Crossing dataset с Kaggle) перед загрузкой в БД.
-
-ВАЖНО про этот датасет:
-- Разделитель колонок — точка с запятой (;), а не запятая
-- Кодировка — latin-1 (ISO-8859-1), не UTF-8
-- Встречаются "битые" строки (лишние поля из-за неэкранированных кавычек
-  в названиях книг) — их мы пропускаем при чтении
-
-Запуск:
+Cleans books.csv (Book-Crossing dataset from Kaggle) before loading it into the DB.
+ 
+IMPORTANT about this dataset:
+- The column delimiter is a semicolon (;), not a comma
+- The encoding is latin-1 (ISO-8859-1), not UTF-8
+- There are some "broken" rows (extra fields caused by unescaped quotes
+  in book titles) — these are skipped while reading
+ 
+Usage:
     python clean_books.py
-Ожидает файл backend/data/books.csv, создаёт backend/data/cleaned_books.csv
+Expects backend/data/books.csv, creates backend/data/cleaned_books.csv
 """
-
+ 
 import pandas as pd
-
+ 
 INPUT_FILE = "../data/books.csv"
 OUTPUT_FILE = "../data/cleaned_books.csv"
 CURRENT_YEAR = 2026
-
+ 
 COLUMN_MAP = {
     "ISBN": "isbn",
     "Book-Title": "title",
@@ -25,60 +25,60 @@ COLUMN_MAP = {
     "Year-Of-Publication": "year",
     "Publisher": "publisher",
 }
-
-
+ 
+ 
 def load_raw(path: str) -> pd.DataFrame:
     df = pd.read_csv(
         path,
         sep=";",
         encoding="latin-1",
         quotechar='"',
-        on_bad_lines="skip",   # пропускаем строки с некорректным числом полей
+        on_bad_lines="skip",   # skip rows with an incorrect number of fields
         low_memory=False,
     )
     return df
-
-
+ 
+ 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns=COLUMN_MAP)
-
+ 
     needed = ["isbn", "title", "author", "year", "publisher"]
     df = df[[c for c in needed if c in df.columns]].copy()
-
-    # Строки без ISBN или названия нам не нужны
+ 
+    # Rows without an ISBN or title are not needed
     df = df.dropna(subset=["isbn", "title"])
-
-    # ISBN: убираем всё, кроме цифр и буквы X (контрольная цифра ISBN-10)
+ 
+    # ISBN: strip everything except digits and the letter X (ISBN-10 check digit)
     df["isbn"] = df["isbn"].astype(str).str.strip().str.replace(r"[^0-9Xx]", "", regex=True)
     df = df[df["isbn"].str.len() > 0]
-
-    # Удаляем дубликаты ISBN, оставляя первую запись
+ 
+    # Remove duplicate ISBNs, keeping the first record
     df = df.drop_duplicates(subset=["isbn"], keep="first")
-
-    # Год публикации: только разумный диапазон, иначе оставляем пустым
+ 
+    # Publication year: only a sane range is kept, otherwise left empty
     df["year"] = pd.to_numeric(df["year"], errors="coerce")
     df.loc[(df["year"] < 1450) | (df["year"] > CURRENT_YEAR), "year"] = pd.NA
     df["year"] = df["year"].astype("Int64")
-
-    # Заполняем пропуски в текстовых полях
+ 
+    # Fill missing values in text fields
     df["author"] = df["author"].fillna("Unknown").astype(str).str.strip()
     df["publisher"] = df["publisher"].fillna("Unknown").astype(str).str.strip()
     df["title"] = df["title"].astype(str).str.strip()
-
+ 
     return df.reset_index(drop=True)
-
-
+ 
+ 
 def main():
-    print(f"Читаю {INPUT_FILE} ...")
+    print(f"Reading {INPUT_FILE} ...")
     raw = load_raw(INPUT_FILE)
-    print(f"Загружено строк: {len(raw)}")
-
+    print(f"Rows loaded: {len(raw)}")
+ 
     cleaned = clean(raw)
-    print(f"После очистки осталось строк: {len(cleaned)}")
-
+    print(f"Rows remaining after cleaning: {len(cleaned)}")
+ 
     cleaned.to_csv(OUTPUT_FILE, index=False)
-    print(f"Сохранено в {OUTPUT_FILE}")
-
-
+    print(f"Saved to {OUTPUT_FILE}")
+ 
+ 
 if __name__ == "__main__":
     main()

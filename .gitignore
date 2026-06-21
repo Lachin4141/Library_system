@@ -8,24 +8,23 @@ env/
 .Python
 *.egg-info/
 
-# Переменные окружения и секреты
+# variables
 .env
 .env.*
 
-# Базы данных (локальный SQLite)
+# DB (local SQLite)
 *.db
 *.sqlite3
 
 
 # Alembic
-# (версии миграций оставляем в git, кэш — нет)
 *.pyc
 
 # IDE
 .vscode/
 .idea/
 
-# Логи
+# logs
 *.log
 
 # OS

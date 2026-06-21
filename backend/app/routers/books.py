@@ -1,38 +1,38 @@
 """
-Эндпоинты для управления книгами: список/поиск, получение, добавление,
-обновление, удаление. Изменяющие операции (добавить/обновить/удалить)
-доступны только Administrator и Librarian.
+Endpoints for managing books: list/search, fetch, add,
+update, delete. Mutating operations (add/update/delete) are
+available only to Administrator and Librarian.
 """
-
+ 
 from typing import Optional
-
+ 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-
+ 
 from database import get_db
 from models import Book, RoleEnum
 from schemas import BookCreate, BookUpdate, BookOut, BookListOut
 from auth.dependencies import require_role
-
+ 
 router = APIRouter()
-
-
+ 
+ 
 @router.get("", response_model=BookListOut)
 def list_books(
-    search: Optional[str] = Query(None, description="Поиск сразу по названию, автору, издателю и ISBN"),
-    title: Optional[str] = Query(None, description="Фильтр по названию (частичное совпадение)"),
-    author: Optional[str] = Query(None, description="Фильтр по автору"),
-    publisher: Optional[str] = Query(None, description="Фильтр по издателю"),
-    isbn: Optional[str] = Query(None, description="Фильтр по ISBN"),
-    available_only: bool = Query(False, description="Только книги с доступными экземплярами"),
-    skip: int = Query(0, ge=0, description="Сколько записей пропустить (пагинация)"),
-    limit: int = Query(50, ge=1, le=200, description="Сколько записей вернуть (максимум 200)"),
+    search: Optional[str] = Query(None, description="Search across title, author, publisher, and ISBN at once"),
+    title: Optional[str] = Query(None, description="Filter by title (partial match)"),
+    author: Optional[str] = Query(None, description="Filter by author"),
+    publisher: Optional[str] = Query(None, description="Filter by publisher"),
+    isbn: Optional[str] = Query(None, description="Filter by ISBN"),
+    available_only: bool = Query(False, description="Only books with available copies"),
+    skip: int = Query(0, ge=0, description="How many records to skip (pagination)"),
+    limit: int = Query(50, ge=1, le=200, description="How many records to return (max 200)"),
     db: Session = Depends(get_db),
 ):
-    """Список книг с поиском, фильтрацией и пагинацией."""
+    """List of books with search, filtering, and pagination."""
     query = db.query(Book)
-
+ 
     if search:
         like = f"%{search}%"
         query = query.filter(
@@ -43,7 +43,7 @@ def list_books(
                 Book.isbn.ilike(like),
             )
         )
-
+ 
     if title:
         query = query.filter(Book.title.ilike(f"%{title}%"))
     if author:
@@ -54,21 +54,21 @@ def list_books(
         query = query.filter(Book.isbn.ilike(f"%{isbn}%"))
     if available_only:
         query = query.filter(Book.available_copies > 0)
-
+ 
     total = query.count()
     items = query.offset(skip).limit(limit).all()
     return BookListOut(total=total, items=items)
-
-
+ 
+ 
 @router.get("/{isbn}", response_model=BookOut)
 def get_book(isbn: str, db: Session = Depends(get_db)):
-    """Одна книга по ISBN."""
+    """A single book by ISBN."""
     book = db.query(Book).filter(Book.isbn == isbn).first()
     if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
     return book
-
-
+ 
+ 
 @router.post(
     "",
     response_model=BookOut,
@@ -76,14 +76,14 @@ def get_book(isbn: str, db: Session = Depends(get_db)):
     dependencies=[Depends(require_role(RoleEnum.administrator, RoleEnum.librarian))],
 )
 def create_book(payload: BookCreate, db: Session = Depends(get_db)):
-    """Добавить новую книгу. Доступно: Administrator, Librarian."""
+    """Add a new book. Available to: Administrator, Librarian."""
     existing = db.query(Book).filter(Book.isbn == payload.isbn).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Книга с таким ISBN уже существует",
+            detail="A book with this ISBN already exists",
         )
-
+ 
     book = Book(
         isbn=payload.isbn,
         title=payload.title,
@@ -97,46 +97,46 @@ def create_book(payload: BookCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(book)
     return book
-
-
+ 
+ 
 @router.put(
     "/{isbn}",
     response_model=BookOut,
     dependencies=[Depends(require_role(RoleEnum.administrator, RoleEnum.librarian))],
 )
 def update_book(isbn: str, payload: BookUpdate, db: Session = Depends(get_db)):
-    """Обновить данные книги (частично). Доступно: Administrator, Librarian."""
+    """Update book data (partial). Available to: Administrator, Librarian."""
     book = db.query(Book).filter(Book.isbn == isbn).first()
     if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+ 
     update_data = payload.model_dump(exclude_unset=True)
-
-    # Если меняется total_copies — сдвигаем available_copies на ту же разницу,
-    # чтобы не "потерять" уже выданные экземпляры и не создать лишние из воздуха.
+ 
+    # If total_copies changes, shift available_copies by the same difference,
+    # so we don't "lose" copies that are already checked out or create extra ones out of thin air.
     if "total_copies" in update_data:
         diff = update_data["total_copies"] - book.total_copies
         book.available_copies = max(0, book.available_copies + diff)
-
+ 
     for field, value in update_data.items():
         setattr(book, field, value)
-
+ 
     db.commit()
     db.refresh(book)
     return book
-
-
+ 
+ 
 @router.delete(
     "/{isbn}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_role(RoleEnum.administrator, RoleEnum.librarian))],
 )
 def delete_book(isbn: str, db: Session = Depends(get_db)):
-    """Удалить книгу. Доступно: Administrator, Librarian."""
+    """Delete a book. Available to: Administrator, Librarian."""
     book = db.query(Book).filter(Book.isbn == isbn).first()
     if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+ 
     db.delete(book)
     db.commit()
     return None

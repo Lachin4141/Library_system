@@ -1,221 +1,604 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STACKS — Library Management System</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink:#211C16;
-    --bg:#16312B;
-    --bg-soft:#1D3A33;
-    --parchment:#EFE7D8;
-    --parchment-dim:#E2D8C2;
-    --brass:#C8A24D;
-    --brass-dark:#A9853A;
-    --stamp:#A23B2E;
-    --stamp-dark:#832F25;
-    --line:#2C4A3F;
-    --ok:#4C7A5E;
-    --font-display:'Spectral',serif;
-    --font-body:'Inter',sans-serif;
-    --font-mono:'IBM Plex Mono',monospace;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    background-image:radial-gradient(circle at 15% 0%, var(--bg-soft) 0%, var(--bg) 55%);
-    color:var(--parchment);
-    font-family:var(--font-body);
-    min-height:100vh;
-  }
-  .hidden{display:none !important;}
-  button{font-family:inherit;cursor:pointer;}
-  input,select{font-family:inherit;}
-  :focus-visible{outline:2px solid var(--brass);outline-offset:2px;}
-  @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important;}}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STACKS — Library Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --ink: #211C16;
+      --bg: #16312B;
+      --bg-soft: #1D3A33;
+      --parchment: #EFE7D8;
+      --parchment-dim: #E2D8C2;
+      --brass: #C8A24D;
+      --brass-dark: #A9853A;
+      --stamp: #A23B2E;
+      --stamp-dark: #832F25;
+      --line: #2C4A3F;
+      --ok: #4C7A5E;
+      --font-display: 'Spectral', serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+    }
 
-  /* ---------- Auth view ---------- */
-  #view-auth{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-  }
-  .auth-card{
-    position:relative;
-    width:100%;
-    max-width:380px;
-    background:var(--parchment);
-    color:var(--ink);
-    border-radius:6px;
-    padding:36px 32px 28px;
-    box-shadow:0 18px 40px rgba(0,0,0,0.35);
-  }
-  .auth-card-hole{
-    position:absolute;
-    top:14px;left:14px;
-    width:14px;height:14px;
-    border-radius:50%;
-    background:var(--bg);
-    box-shadow:inset 0 1px 2px rgba(0,0,0,0.4);
-  }
-  .wordmark{
-    font-family:var(--font-display);
-    font-weight:700;
-    font-size:1.6rem;
-    letter-spacing:0.04em;
-    margin:0 0 4px;
-    text-align:center;
-  }
-  .wordmark.small{font-size:1.25rem;text-align:left;color:var(--parchment);}
-  .tagline{
-    text-align:center;
-    font-size:0.85rem;
-    color:#5b5145;
-    margin:0 0 22px;
-  }
-  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #d9cdb2;}
-  .tab{
-    flex:1;background:none;border:none;padding:10px 0;
-    font-size:0.85rem;font-weight:600;color:#8a7c66;
-    border-bottom:2px solid transparent;
-  }
-  .tab.active{color:var(--ink);border-bottom-color:var(--brass-dark);}
-  .auth-form{display:flex;flex-direction:column;gap:14px;}
-  .auth-form label{font-size:0.78rem;font-weight:600;color:#5b5145;display:flex;flex-direction:column;gap:5px;}
-  .auth-form input,.auth-form select{
-    padding:10px 11px;border:1px solid #d9cdb2;border-radius:4px;
-    background:#fbf8f1;color:var(--ink);font-size:0.92rem;
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* ---------- Buttons ---------- */
-  .btn{
-    border:none;border-radius:4px;padding:9px 16px;
-    font-size:0.84rem;font-weight:600;letter-spacing:0.01em;
-  }
-  .btn.full{width:100%;padding:11px;}
-  .btn-brass{background:var(--brass);color:#2b2007;}
-  .btn-brass:hover{background:var(--brass-dark);}
-  .btn-return{background:var(--stamp);color:#fbeae6;}
-  .btn-return:hover{background:var(--stamp-dark);}
-  .btn-reserve{background:transparent;border:1.5px solid var(--brass);color:var(--brass);}
-  .btn-reserve:hover{background:rgba(200,162,77,0.12);}
-  .btn-cancel{background:transparent;border:1.5px solid var(--stamp);color:#e7a89e;}
-  .btn-cancel:hover{background:rgba(162,59,46,0.15);}
-  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--parchment);}
-  .btn-ghost:hover{border-color:var(--brass);}
-  .btn.small{padding:5px 10px;font-size:0.74rem;}
-  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  /* ---------- App shell ---------- */
-  #view-app{min-height:100vh;}
-  .topbar{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:16px 28px;border-bottom:1px solid var(--line);
-    flex-wrap:wrap;gap:12px;
-  }
-  .nav{display:flex;gap:6px;}
-  .nav-btn{background:none;border:1px solid transparent;color:#a9c2b8;padding:7px 14px;border-radius:4px;font-size:0.85rem;font-weight:500;}
-  .nav-btn.active{color:var(--parchment);border-color:var(--line);background:var(--bg-soft);}
-  .who{display:flex;align-items:center;gap:10px;font-size:0.85rem;color:#a9c2b8;}
-  .badge-role{
-    font-family:var(--font-mono);font-size:0.68rem;text-transform:uppercase;
-    background:var(--bg-soft);border:1px solid var(--line);border-radius:3px;padding:3px 7px;color:var(--brass);
-  }
-  .panel{padding:24px 28px 60px;max-width:1180px;margin:0 auto;}
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(circle at 15% 0%, var(--bg-soft) 0%, var(--bg) 55%);
+      color: var(--parchment);
+      font-family: var(--font-body);
+      min-height: 100vh;
+    }
 
-  /* ---------- Search & admin add ---------- */
-  .searchbar{display:flex;gap:10px;margin-bottom:18px;}
-  .searchbar input{
-    flex:1;padding:11px 14px;border-radius:4px;border:1px solid var(--line);
-    background:var(--bg-soft);color:var(--parchment);font-size:0.92rem;
-  }
-  .searchbar input::placeholder{color:#7f988e;}
-  .admin-box{
-    background:var(--bg-soft);border:1px dashed var(--line);border-radius:6px;
-    padding:16px 18px;margin-bottom:22px;
-  }
-  .admin-box h3{margin:0 0 12px;font-family:var(--font-display);font-weight:600;font-size:1rem;color:var(--brass);}
-  .add-book-form{display:flex;flex-wrap:wrap;gap:10px;}
-  .add-book-form input{
-    padding:9px 10px;border-radius:4px;border:1px solid var(--line);
-    background:var(--bg);color:var(--parchment);font-size:0.85rem;
-  }
-  .add-book-form input#add-title{flex:2;min-width:180px;}
-  .add-book-form input#add-isbn{width:140px;}
-  .add-book-form input#add-author,.add-book-form input#add-publisher{flex:1;min-width:130px;}
-  .add-book-form input#add-year,.add-book-form input#add-copies{width:90px;}
+    .hidden {
+      display: none !important;
+    }
 
-  /* ---------- Catalog grid / cards ---------- */
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
-    gap:16px;
-  }
-  .card{
-    position:relative;
-    background:var(--parchment);color:var(--ink);
-    border-radius:5px;padding:18px 16px 16px;
-    box-shadow:0 6px 16px rgba(0,0,0,0.25);
-  }
-  .card-hole{
-    position:absolute;top:10px;left:10px;width:10px;height:10px;border-radius:50%;
-    background:var(--bg);box-shadow:inset 0 1px 2px rgba(0,0,0,0.35);
-  }
-  .card-delete{
-    position:absolute;top:8px;right:8px;background:none;border:none;
-    color:#a08a6b;font-size:0.95rem;line-height:1;padding:4px;border-radius:3px;
-  }
-  .card-delete:hover{color:var(--stamp);}
-  .card-status{
-    display:flex;align-items:center;gap:6px;font-size:0.68rem;
-    text-transform:uppercase;letter-spacing:0.04em;color:#6b6050;
-    margin:0 0 10px 16px;font-weight:600;
-  }
-  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
-  .dot-ok{background:var(--ok);}
-  .dot-stamp{background:var(--stamp);}
-  .card-title{font-family:var(--font-display);font-size:1.02rem;font-weight:600;margin:0 0 4px;line-height:1.25;}
-  .card-author{margin:0 0 2px;font-size:0.84rem;color:#4a4234;}
-  .card-meta{margin:0 0 8px;font-size:0.76rem;color:#7c715d;}
-  .card-isbn{
-    font-family:var(--font-mono);font-size:0.7rem;color:#8a7c66;
-    margin:0 0 4px;letter-spacing:0.02em;
-  }
-  .card-copies{font-size:0.74rem;color:#5b5145;margin:0 0 12px;}
-  .card-action .btn{width:100%;}
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
 
-  /* ---------- Activity tables ---------- */
-  .panel h2{font-family:var(--font-display);font-weight:600;font-size:1.15rem;margin:28px 0 12px;color:var(--parchment);}
-  .panel h2:first-child{margin-top:0;}
-  .table{width:100%;border-collapse:collapse;background:var(--bg-soft);border-radius:6px;overflow:hidden;}
-  .table th,.table td{text-align:left;padding:10px 14px;font-size:0.83rem;border-bottom:1px solid var(--line);}
-  .table th{color:#a9c2b8;font-weight:600;text-transform:uppercase;font-size:0.68rem;letter-spacing:0.04em;}
-  .table td.mono{font-family:var(--font-mono);font-size:0.76rem;color:#a9c2b8;}
-  .table td.empty{color:#7f988e;text-align:center;padding:22px;}
-  .badge{font-size:0.68rem;font-weight:600;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:0.03em;}
-  .badge-ok{background:rgba(76,122,94,0.25);color:#8fd1ab;}
-  .badge-warn{background:rgba(200,162,77,0.22);color:var(--brass);}
-  .badge-bad{background:rgba(162,59,46,0.25);color:#e7a89e;}
-  .badge-muted{background:rgba(255,255,255,0.08);color:#9fb0a8;}
+    input,
+    select {
+      font-family: inherit;
+    }
 
-  /* ---------- Toast ---------- */
-  .toast{
-    position:fixed;top:18px;left:50%;transform:translateX(-50%);
-    padding:11px 20px;border-radius:5px;font-size:0.85rem;font-weight:500;
-    z-index:50;box-shadow:0 8px 20px rgba(0,0,0,0.3);
-  }
-  .toast.show{display:block;}
-  .toast.hidden{display:none;}
-  .toast.ok{background:var(--ok);color:#0d1f15;}
-  .toast.err{background:var(--stamp);color:#fbeae6;}
-</style>
+    :focus-visible {
+      outline: 2px solid var(--brass);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* ---------- Auth view ---------- */
+    #view-auth {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      background: var(--parchment);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 36px 32px 28px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .auth-card-hole {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bg);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    .wordmark {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.6rem;
+      letter-spacing: 0.04em;
+      margin: 0 0 4px;
+      text-align: center;
+    }
+
+    .wordmark.small {
+      font-size: 1.25rem;
+      text-align: left;
+      color: var(--parchment);
+    }
+
+    .tagline {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #5b5145;
+      margin: 0 0 22px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #d9cdb2;
+    }
+
+    .tab {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 10px 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #8a7c66;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--brass-dark);
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .auth-form label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #5b5145;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .auth-form input,
+    .auth-form select {
+      padding: 10px 11px;
+      border: 1px solid #d9cdb2;
+      border-radius: 4px;
+      background: #fbf8f1;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      border: none;
+      border-radius: 4px;
+      padding: 9px 16px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .btn.full {
+      width: 100%;
+      padding: 11px;
+    }
+
+    .btn-brass {
+      background: var(--brass);
+      color: #2b2007;
+    }
+
+    .btn-brass:hover {
+      background: var(--brass-dark);
+    }
+
+    .btn-return {
+      background: var(--stamp);
+      color: #fbeae6;
+    }
+
+    .btn-return:hover {
+      background: var(--stamp-dark);
+    }
+
+    .btn-reserve {
+      background: transparent;
+      border: 1.5px solid var(--brass);
+      color: var(--brass);
+    }
+
+    .btn-reserve:hover {
+      background: rgba(200, 162, 77, 0.12);
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1.5px solid var(--stamp);
+      color: #e7a89e;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(162, 59, 46, 0.15);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--parchment);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--brass);
+    }
+
+    .btn.small {
+      padding: 5px 10px;
+      font-size: 0.74rem;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ---------- App shell ---------- */
+    #view-app {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--line);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .nav {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: #a9c2b8;
+      padding: 7px 14px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .nav-btn.active {
+      color: var(--parchment);
+      border-color: var(--line);
+      background: var(--bg-soft);
+    }
+
+    .who {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: #a9c2b8;
+    }
+
+    .badge-role {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 3px 7px;
+      color: var(--brass);
+    }
+
+    .panel {
+      padding: 24px 28px 60px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* ---------- Search & admin add ---------- */
+    .searchbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .searchbar input {
+      flex: 1;
+      padding: 11px 14px;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      color: var(--parchment);
+      font-size: 0.92rem;
+    }
+
+    .searchbar input::placeholder {
+      color: #7f988e;
+    }
+
+    .admin-box {
+      background: var(--bg-soft);
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      padding: 16px 18px;
+      margin-bottom: 22px;
+    }
+
+    .admin-box h3 {
+      margin: 0 0 12px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--brass);
+    }
+
+    .add-book-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .add-book-form input {
+      padding: 9px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--parchment);
+      font-size: 0.85rem;
+    }
+
+    .add-book-form input#add-title {
+      flex: 2;
+      min-width: 180px;
+    }
+
+    .add-book-form input#add-isbn {
+      width: 140px;
+    }
+
+    .add-book-form input#add-author,
+    .add-book-form input#add-publisher {
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .add-book-form input#add-year,
+    .add-book-form input#add-copies {
+      width: 90px;
+    }
+
+    /* ---------- Catalog grid / cards ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      position: relative;
+      background: var(--parchment);
+      color: var(--ink);
+      border-radius: 5px;
+      padding: 18px 16px 16px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-hole {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-delete {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #a08a6b;
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 3px;
+    }
+
+    .card-delete:hover {
+      color: var(--stamp);
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b6050;
+      margin: 0 0 10px 16px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot-ok {
+      background: var(--ok);
+    }
+
+    .dot-stamp {
+      background: var(--stamp);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1.02rem;
+      font-weight: 600;
+      margin: 0 0 4px;
+      line-height: 1.25;
+    }
+
+    .card-author {
+      margin: 0 0 2px;
+      font-size: 0.84rem;
+      color: #4a4234;
+    }
+
+    .card-meta {
+      margin: 0 0 8px;
+      font-size: 0.76rem;
+      color: #7c715d;
+    }
+
+    .card-isbn {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: #8a7c66;
+      margin: 0 0 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .card-copies {
+      font-size: 0.74rem;
+      color: #5b5145;
+      margin: 0 0 12px;
+    }
+
+    .card-action .btn {
+      width: 100%;
+    }
+
+    /* ---------- Activity tables ---------- */
+    .panel h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.15rem;
+      margin: 28px 0 12px;
+      color: var(--parchment);
+    }
+
+    .panel h2:first-child {
+      margin-top: 0;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-soft);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .table th,
+    .table td {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.83rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table th {
+      color: #a9c2b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+    }
+
+    .table td.mono {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #a9c2b8;
+    }
+
+    .table td.empty {
+      color: #7f988e;
+      text-align: center;
+      padding: 22px;
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-ok {
+      background: rgba(76, 122, 94, 0.25);
+      color: #8fd1ab;
+    }
+
+    .badge-warn {
+      background: rgba(200, 162, 77, 0.22);
+      color: var(--brass);
+    }
+
+    .badge-bad {
+      background: rgba(162, 59, 46, 0.25);
+      color: #e7a89e;
+    }
+
+    .badge-muted {
+      background: rgba(255, 255, 255, 0.08);
+      color: #9fb0a8;
+    }
+
+    /* ---------- Toast ---------- */
+    .toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 11px 20px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      z-index: 50;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .toast.hidden {
+      display: none;
+    }
+
+    .toast.ok {
+      background: var(--ok);
+      color: #0d1f15;
+    }
+
+    .toast.err {
+      background: var(--stamp);
+      color: #fbeae6;
+    }
+  </style>
 </head>
+
 <body>
 
   <div id="toast" class="toast hidden"></div>
@@ -225,24 +608,25 @@
     <div class="auth-card">
       <div class="auth-card-hole"></div>
       <h1 class="wordmark">📖 STACKS</h1>
-      <p class="tagline">Каталог, выдача и резервация книг библиотеки</p>
+      <p class="tagline">Library catalogue, borrowing and reservations</p>
 
       <div class="tabs">
-        <button id="tab-login" class="tab active" type="button">Вход</button>
-        <button id="tab-register" class="tab" type="button">Регистрация</button>
+        <button id="tab-login" class="tab active" type="button">Sign In</button>
+        <button id="tab-register" class="tab" type="button">Register</button>
       </div>
 
       <form id="form-login" class="auth-form">
         <label>Email<input type="email" id="login-email" required autocomplete="username"></label>
-        <label>Пароль<input type="password" id="login-password" required autocomplete="current-password"></label>
-        <button type="submit" class="btn btn-brass full">Войти</button>
+        <label>Password<input type="password" id="login-password" required autocomplete="current-password"></label>
+        <button type="submit" class="btn btn-brass full">Sign In</button>
       </form>
 
       <form id="form-register" class="auth-form hidden">
-        <label>Имя<input type="text" id="reg-name" required></label>
+        <label>Full Name<input type="text" id="reg-name" required></label>
         <label>Email<input type="email" id="reg-email" required autocomplete="username"></label>
-        <label>Пароль (мин. 6 символов)<input type="password" id="reg-password" minlength="6" required autocomplete="new-password"></label>
-        <button type="submit" class="btn btn-brass full">Зарегистрироваться</button>
+        <label>Password (min. 6 characters)<input type="password" id="reg-password" minlength="6" required
+            autocomplete="new-password"></label>
+        <button type="submit" class="btn btn-brass full">Create Account</button>
       </form>
     </div>
   </section>
@@ -252,34 +636,34 @@
     <header class="topbar">
       <div class="wordmark small">📖 STACKS</div>
       <nav class="nav">
-        <button id="nav-catalog" class="nav-btn active" type="button">Каталог</button>
-        <button id="nav-activity" class="nav-btn" type="button">Моя активность</button>
-        <button id="nav-users" class="nav-btn hidden" type="button">Пользователи</button>
+        <button id="nav-catalog" class="nav-btn active" type="button">Catalogue</button>
+        <button id="nav-activity" class="nav-btn" type="button">My Activity</button>
+        <button id="nav-users" class="nav-btn hidden" type="button">Users</button>
       </nav>
       <div class="who">
         <span id="who-name"></span>
         <span id="who-role" class="badge-role"></span>
-        <button id="btn-logout" class="btn btn-ghost" type="button">Выйти</button>
+        <button id="btn-logout" class="btn btn-ghost" type="button">Sign Out</button>
       </div>
     </header>
 
     <!-- Catalog panel -->
     <div id="panel-catalog" class="panel">
       <form id="form-search" class="searchbar">
-        <input type="text" id="search-input" placeholder="Поиск по названию, автору, издателю или ISBN…">
-        <button type="submit" class="btn btn-brass">Искать</button>
+        <input type="text" id="search-input" placeholder="Search by title, author, publisher or ISBN…">
+        <button type="submit" class="btn btn-brass">Search</button>
       </form>
 
       <div id="admin-add" class="admin-box hidden">
-        <h3>Добавить книгу</h3>
+        <h3>Add a Book</h3>
         <form id="form-add-book" class="add-book-form">
           <input type="text" id="add-isbn" placeholder="ISBN" required>
-          <input type="text" id="add-title" placeholder="Название" required>
-          <input type="text" id="add-author" placeholder="Автор">
-          <input type="text" id="add-publisher" placeholder="Издательство">
-          <input type="number" id="add-year" placeholder="Год">
-          <input type="number" id="add-copies" placeholder="Экземпляров" value="1" min="1">
-          <button type="submit" class="btn btn-brass">Добавить</button>
+          <input type="text" id="add-title" placeholder="Title" required>
+          <input type="text" id="add-author" placeholder="Author">
+          <input type="text" id="add-publisher" placeholder="Publisher">
+          <input type="number" id="add-year" placeholder="Year">
+          <input type="number" id="add-copies" placeholder="Copies" value="1" min="1">
+          <button type="submit" class="btn btn-brass">Add</button>
         </form>
       </div>
 
@@ -288,60 +672,90 @@
 
     <!-- Activity panel -->
     <div id="panel-activity" class="panel hidden">
-      <h2>История выдач</h2>
+      <h2>Borrow History</h2>
       <table class="table" id="table-borrow">
         <thead>
-          <tr><th>Книга</th><th>ISBN</th><th>Выдана</th><th>Срок</th><th>Возвращена</th><th>Статус</th></tr>
+          <tr>
+            <th>Book</th>
+            <th>ISBN</th>
+            <th>Borrowed</th>
+            <th>Due</th>
+            <th>Returned</th>
+            <th>Status</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
 
-      <h2>Мои резервации</h2>
+      <h2>My Reservations</h2>
       <table class="table" id="table-reservations">
         <thead>
-          <tr><th>Книга</th><th>Дата резервации</th><th>Статус</th><th></th></tr>
+          <tr>
+            <th>Book</th>
+            <th>Reserved On</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
 
-    <!-- Users panel (только Administrator) -->
+    <!-- Users panel (Administrator only) -->
     <div id="panel-users" class="panel hidden">
-      <h2>Пользователи</h2>
+      <h2>Users</h2>
       <table class="table" id="table-users">
         <thead>
-          <tr><th>Имя</th><th>Email</th><th>Роль</th><th>Книг сейчас / всего</th><th></th></tr>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Active / Total Borrows</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
 
       <div id="user-detail" class="admin-box hidden" style="margin-top:24px;">
-        <h3 id="user-detail-title">Пользователь</h3>
+        <h3 id="user-detail-title">User</h3>
         <form id="form-edit-user" class="add-book-form">
-          <input type="text" id="edit-user-name" placeholder="Имя">
+          <input type="text" id="edit-user-name" placeholder="Full Name">
           <input type="email" id="edit-user-email" placeholder="Email">
-          <input type="password" id="edit-user-password" placeholder="Новый пароль (необязательно)" autocomplete="new-password">
+          <input type="password" id="edit-user-password" placeholder="New password (optional)"
+            autocomplete="new-password">
           <select id="edit-user-role">
             <option value="student">Student</option>
             <option value="librarian">Librarian</option>
             <option value="administrator">Administrator</option>
           </select>
-          <button type="submit" class="btn btn-brass">Сохранить</button>
-          <button type="button" id="btn-close-user-detail" class="btn btn-ghost">Закрыть</button>
+          <button type="submit" class="btn btn-brass">Save</button>
+          <button type="button" id="btn-close-user-detail" class="btn btn-ghost">Close</button>
         </form>
 
-        <h2>История выдач</h2>
+        <h2>Borrow History</h2>
         <table class="table" id="table-user-borrow">
           <thead>
-            <tr><th>ISBN</th><th>Выдана</th><th>Срок</th><th>Возвращена</th><th>Статус</th><th></th></tr>
+            <tr>
+              <th>ISBN</th>
+              <th>Borrowed</th>
+              <th>Due</th>
+              <th>Returned</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
 
-        <h2>Резервации</h2>
+        <h2>Reservations</h2>
         <table class="table" id="table-user-reservations">
           <thead>
-            <tr><th>ISBN</th><th>Дата</th><th>Статус</th></tr>
+            <tr>
+              <th>ISBN</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -349,148 +763,148 @@
     </div>
   </section>
 
-<script>
-  // Адрес backend (uvicorn). Поменяйте, если запускаете API на другом хосте/порту.
-  const API_BASE = 'http://127.0.0.1:8000';
+  <script>
+    // Backend base URL. Change if your API runs on a different host or port.
+    const API_BASE = 'http://127.0.0.1:8000';
 
-  // Состояние держим в памяти JS — без localStorage/sessionStorage,
-  // поэтому при перезагрузке страницы нужно будет войти заново.
-  let token = null;
-  let currentUser = null;
-  let currentSearch = '';
-  let bookTitleCache = {};      // isbn -> book (для подписи названий в таблицах истории)
-  let currentBooksList = [];
-  let historyList = [];
-  let reservationsList = [];
-  let myBorrowedIsbns = new Set();
-  let myPendingReservationByIsbn = new Map();
+    // State is kept in JS memory — no localStorage/sessionStorage,
+    // so the user must sign in again after a page refresh.
+    let token = null;
+    let currentUser = null;
+    let currentSearch = '';
+    let bookTitleCache = {};       // isbn -> book (used to display titles in history tables)
+    let currentBooksList = [];
+    let historyList = [];
+    let reservationsList = [];
+    let myBorrowedIsbns = new Set();
+    let myPendingReservationByIsbn = new Map();
 
-  // ---------- helpers ----------
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function val(id) { return document.getElementById(id).value.trim(); }
-  function numOrNull(id) { const v = val(id); return v ? Number(v) : null; }
-  function isStaff() { return currentUser && (currentUser.role === 'administrator' || currentUser.role === 'librarian'); }
-  function isAdmin() { return currentUser && currentUser.role === 'administrator'; }
+    // ---------- helpers ----------
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function val(id) { return document.getElementById(id).value.trim(); }
+    function numOrNull(id) { const v = val(id); return v ? Number(v) : null; }
+    function isStaff() { return currentUser && (currentUser.role === 'administrator' || currentUser.role === 'librarian'); }
+    function isAdmin() { return currentUser && currentUser.role === 'administrator'; }
 
-  function toast(msg, kind = 'ok') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = `toast show ${kind}`;
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => { el.className = 'toast hidden'; }, 3500);
-  }
+    function toast(msg, kind = 'ok') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `toast show ${kind}`;
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.className = 'toast hidden'; }, 3500);
+    }
 
-  function statusBadge(status) {
-    const map = {
-      borrowed:  ['На руках', 'badge-warn'],
-      returned:  ['Возвращена', 'badge-ok'],
-      overdue:   ['Просрочена', 'badge-bad'],
-      pending:   ['Ожидает', 'badge-warn'],
-      fulfilled: ['Готова к выдаче', 'badge-ok'],
-      cancelled: ['Отменена', 'badge-muted'],
-    };
-    const [label, cls] = map[status] || [status, 'badge-muted'];
-    return `<span class="badge ${cls}">${label}</span>`;
-  }
+    function statusBadge(status) {
+      const map = {
+        borrowed: ['Borrowed', 'badge-warn'],
+        returned: ['Returned', 'badge-ok'],
+        overdue: ['Overdue', 'badge-bad'],
+        pending: ['Pending', 'badge-warn'],
+        fulfilled: ['Ready', 'badge-ok'],
+        cancelled: ['Cancelled', 'badge-muted'],
+      };
+      const [label, cls] = map[status] || [status, 'badge-muted'];
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
 
-  async function api(path, { method = 'GET', body, auth = true } = {}) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (auth && token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(API_BASE + path, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    if (res.status === 204) return null;
-    let data = null;
-    try { data = await res.json(); } catch (e) { /* пустое тело ответа */ }
-    if (!res.ok) {
-      let detail = `Ошибка ${res.status}`;
-      if (data && data.detail) {
-        detail = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : data.detail;
+    async function api(path, { method = 'GET', body, auth = true } = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (auth && token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(API_BASE + path, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      if (res.status === 204) return null;
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* empty response body */ }
+      if (!res.ok) {
+        let detail = `Error ${res.status}`;
+        if (data && data.detail) {
+          detail = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : data.detail;
+        }
+        throw new Error(detail);
       }
-      throw new Error(detail);
+      return data;
     }
-    return data;
-  }
 
-  // ---------- view switching ----------
-  function showView(name) {
-    document.getElementById('view-auth').classList.toggle('hidden', name !== 'auth');
-    document.getElementById('view-app').classList.toggle('hidden', name !== 'app');
-  }
-  function switchTab(name) {
-    document.getElementById('form-login').classList.toggle('hidden', name !== 'login');
-    document.getElementById('form-register').classList.toggle('hidden', name !== 'register');
-    document.getElementById('tab-login').classList.toggle('active', name === 'login');
-    document.getElementById('tab-register').classList.toggle('active', name === 'register');
-  }
-  function showPanel(name) {
-    document.getElementById('panel-catalog').classList.toggle('hidden', name !== 'catalog');
-    document.getElementById('panel-activity').classList.toggle('hidden', name !== 'activity');
-    document.getElementById('panel-users').classList.toggle('hidden', name !== 'users');
-    document.getElementById('nav-catalog').classList.toggle('active', name === 'catalog');
-    document.getElementById('nav-activity').classList.toggle('active', name === 'activity');
-    document.getElementById('nav-users').classList.toggle('active', name === 'users');
-  }
+    // ---------- view switching ----------
+    function showView(name) {
+      document.getElementById('view-auth').classList.toggle('hidden', name !== 'auth');
+      document.getElementById('view-app').classList.toggle('hidden', name !== 'app');
+    }
+    function switchTab(name) {
+      document.getElementById('form-login').classList.toggle('hidden', name !== 'login');
+      document.getElementById('form-register').classList.toggle('hidden', name !== 'register');
+      document.getElementById('tab-login').classList.toggle('active', name === 'login');
+      document.getElementById('tab-register').classList.toggle('active', name === 'register');
+    }
+    function showPanel(name) {
+      document.getElementById('panel-catalog').classList.toggle('hidden', name !== 'catalog');
+      document.getElementById('panel-activity').classList.toggle('hidden', name !== 'activity');
+      document.getElementById('panel-users').classList.toggle('hidden', name !== 'users');
+      document.getElementById('nav-catalog').classList.toggle('active', name === 'catalog');
+      document.getElementById('nav-activity').classList.toggle('active', name === 'activity');
+      document.getElementById('nav-users').classList.toggle('active', name === 'users');
+    }
 
-  // ---------- rendering ----------
-  function actionButtonHtml(book) {
-    const isbn = book.isbn;
-    if (myBorrowedIsbns.has(isbn)) {
-      return `<button class="btn btn-return" data-action="return" data-isbn="${escapeHtml(isbn)}">Вернуть</button>`;
+    // ---------- rendering ----------
+    function actionButtonHtml(book) {
+      const isbn = book.isbn;
+      if (myBorrowedIsbns.has(isbn)) {
+        return `<button class="btn btn-return" data-action="return" data-isbn="${escapeHtml(isbn)}">Return</button>`;
+      }
+      if (book.available_copies > 0) {
+        return `<button class="btn btn-brass" data-action="borrow" data-isbn="${escapeHtml(isbn)}">Borrow</button>`;
+      }
+      if (myPendingReservationByIsbn.has(isbn)) {
+        return `<button class="btn btn-cancel" data-action="cancel-reservation" data-isbn="${escapeHtml(isbn)}">Cancel Reservation</button>`;
+      }
+      return `<button class="btn btn-reserve" data-action="reserve" data-isbn="${escapeHtml(isbn)}">Reserve</button>`;
     }
-    if (book.available_copies > 0) {
-      return `<button class="btn btn-brass" data-action="borrow" data-isbn="${escapeHtml(isbn)}">Взять</button>`;
-    }
-    if (myPendingReservationByIsbn.has(isbn)) {
-      return `<button class="btn btn-cancel" data-action="cancel-reservation" data-isbn="${escapeHtml(isbn)}">Отменить резерв</button>`;
-    }
-    return `<button class="btn btn-reserve" data-action="reserve" data-isbn="${escapeHtml(isbn)}">Зарезервировать</button>`;
-  }
 
-  function bookCardHtml(book) {
-    const onShelf = book.available_copies > 0;
-    const dotClass = onShelf ? 'dot-ok' : 'dot-stamp';
-    const dotLabel = onShelf ? 'На полке' : 'Выдана';
-    const deleteBtn = isStaff()
-      ? `<button class="card-delete" data-action="delete" data-isbn="${escapeHtml(book.isbn)}" title="Удалить книгу">✕</button>`
-      : '';
-    return `
+    function bookCardHtml(book) {
+      const onShelf = book.available_copies > 0;
+      const dotClass = onShelf ? 'dot-ok' : 'dot-stamp';
+      const dotLabel = onShelf ? 'Available' : 'Checked Out';
+      const deleteBtn = isStaff()
+        ? `<button class="card-delete" data-action="delete" data-isbn="${escapeHtml(book.isbn)}" title="Remove book">✕</button>`
+        : '';
+      return `
       <article class="card">
         <div class="card-hole"></div>
         ${deleteBtn}
         <div class="card-status"><span class="status-dot ${dotClass}"></span>${dotLabel}</div>
         <h3 class="card-title">${escapeHtml(book.title)}</h3>
-        <p class="card-author">${escapeHtml(book.author || 'Автор неизвестен')}</p>
+        <p class="card-author">${escapeHtml(book.author || 'Unknown author')}</p>
         <p class="card-meta">${escapeHtml(book.publisher || '—')} · ${book.year || '—'}</p>
         <p class="card-isbn">№ ${escapeHtml(book.isbn)}</p>
-        <p class="card-copies">${book.available_copies} / ${book.total_copies} доступно</p>
+        <p class="card-copies">${book.available_copies} / ${book.total_copies} available</p>
         <div class="card-action">${actionButtonHtml(book)}</div>
       </article>`;
-  }
-
-  function renderBooksGrid() {
-    const grid = document.getElementById('books-grid');
-    if (!currentBooksList.length) {
-      grid.innerHTML = `<p style="color:#a9c2b8;">Ничего не найдено.</p>`;
-      return;
     }
-    grid.innerHTML = currentBooksList.map(bookCardHtml).join('');
-  }
 
-  function renderHistoryTable() {
-    const tbody = document.querySelector('#table-borrow tbody');
-    if (!historyList.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty">Пока нет ни одной выдачи</td></tr>`;
-      return;
+    function renderBooksGrid() {
+      const grid = document.getElementById('books-grid');
+      if (!currentBooksList.length) {
+        grid.innerHTML = `<p style="color:#a9c2b8;">No books found.</p>`;
+        return;
+      }
+      grid.innerHTML = currentBooksList.map(bookCardHtml).join('');
     }
-    tbody.innerHTML = historyList.map(t => {
-      const title = bookTitleCache[t.isbn] ? bookTitleCache[t.isbn].title : t.isbn;
-      return `<tr>
+
+    function renderHistoryTable() {
+      const tbody = document.querySelector('#table-borrow tbody');
+      if (!historyList.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">No borrow records yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = historyList.map(t => {
+        const title = bookTitleCache[t.isbn] ? bookTitleCache[t.isbn].title : t.isbn;
+        return `<tr>
         <td>${escapeHtml(title)}</td>
         <td class="mono">${escapeHtml(t.isbn)}</td>
         <td>${t.borrow_date}</td>
@@ -498,78 +912,78 @@
         <td>${t.return_date || '—'}</td>
         <td>${statusBadge(t.status)}</td>
       </tr>`;
-    }).join('');
-  }
-
-  function renderReservationsTable() {
-    const tbody = document.querySelector('#table-reservations tbody');
-    if (!reservationsList.length) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty">Резерваций нет</td></tr>`;
-      return;
+      }).join('');
     }
-    tbody.innerHTML = reservationsList.map(r => {
-      const title = bookTitleCache[r.isbn] ? bookTitleCache[r.isbn].title : r.isbn;
-      const cancelBtn = r.status === 'pending'
-        ? `<button class="btn btn-ghost small" data-action="cancel-reservation" data-id="${r.reservation_id}">Отменить</button>`
-        : '';
-      return `<tr>
+
+    function renderReservationsTable() {
+      const tbody = document.querySelector('#table-reservations tbody');
+      if (!reservationsList.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty">No reservations</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = reservationsList.map(r => {
+        const title = bookTitleCache[r.isbn] ? bookTitleCache[r.isbn].title : r.isbn;
+        const cancelBtn = r.status === 'pending'
+          ? `<button class="btn btn-ghost small" data-action="cancel-reservation" data-id="${r.reservation_id}">Cancel</button>`
+          : '';
+        return `<tr>
         <td>${escapeHtml(title)}</td>
         <td>${r.reservation_date}</td>
         <td>${statusBadge(r.status)}</td>
         <td>${cancelBtn}</td>
       </tr>`;
-    }).join('');
-  }
-
-  // ---------- users (admin) ----------
-  let usersList = [];
-  let selectedUserId = null;
-
-  function userRoleBadge(role) {
-    const map = { administrator: 'badge-bad', librarian: 'badge-warn', student: 'badge-ok' };
-    return `<span class="badge ${map[role] || 'badge-muted'}">${role}</span>`;
-  }
-
-  function renderUsersTable() {
-    const tbody = document.querySelector('#table-users tbody');
-    if (!usersList.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="empty">Пользователей нет</td></tr>`;
-      return;
+      }).join('');
     }
-    tbody.innerHTML = usersList.map(u => `
+
+    // ---------- users (admin) ----------
+    let usersList = [];
+    let selectedUserId = null;
+
+    function userRoleBadge(role) {
+      const map = { administrator: 'badge-bad', librarian: 'badge-warn', student: 'badge-ok' };
+      return `<span class="badge ${map[role] || 'badge-muted'}">${role}</span>`;
+    }
+
+    function renderUsersTable() {
+      const tbody = document.querySelector('#table-users tbody');
+      if (!usersList.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty">No users found</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = usersList.map(u => `
       <tr>
         <td>${escapeHtml(u.full_name)}</td>
         <td class="mono">${escapeHtml(u.email)}</td>
         <td>${userRoleBadge(u.role)}</td>
         <td>${u.active_borrow_count} / ${u.total_borrow_count}</td>
-        <td><button class="btn btn-ghost small" data-action="open-user" data-id="${u.user_id}">Открыть</button></td>
+        <td><button class="btn btn-ghost small" data-action="open-user" data-id="${u.user_id}">View</button></td>
       </tr>
     `).join('');
-  }
+    }
 
-  async function loadUsers() {
-    const data = await api('/users');
-    usersList = data.items;
-    renderUsersTable();
-  }
+    async function loadUsers() {
+      const data = await api('/users');
+      usersList = data.items;
+      renderUsersTable();
+    }
 
-  function renderUserDetail(detail) {
-    document.getElementById('user-detail-title').textContent = `Пользователь: ${detail.full_name}`;
-    document.getElementById('edit-user-name').value = detail.full_name;
-    document.getElementById('edit-user-email').value = detail.email;
-    document.getElementById('edit-user-password').value = '';
-    document.getElementById('edit-user-role').value = detail.role;
+    function renderUserDetail(detail) {
+      document.getElementById('user-detail-title').textContent = `User: ${detail.full_name}`;
+      document.getElementById('edit-user-name').value = detail.full_name;
+      document.getElementById('edit-user-email').value = detail.email;
+      document.getElementById('edit-user-password').value = '';
+      document.getElementById('edit-user-role').value = detail.role;
 
-    const borrowBody = document.querySelector('#table-user-borrow tbody');
-    if (!detail.borrow_history.length) {
-      borrowBody.innerHTML = `<tr><td colspan="6" class="empty">Выдач не было</td></tr>`;
-    } else {
-      borrowBody.innerHTML = detail.borrow_history.map(t => {
-        const canForceReturn = t.status === 'borrowed' || t.status === 'overdue';
-        const btn = canForceReturn
-          ? `<button class="btn btn-return small" data-action="force-return" data-id="${t.transaction_id}">Забрать книгу</button>`
-          : '';
-        return `<tr>
+      const borrowBody = document.querySelector('#table-user-borrow tbody');
+      if (!detail.borrow_history.length) {
+        borrowBody.innerHTML = `<tr><td colspan="6" class="empty">No borrow records</td></tr>`;
+      } else {
+        borrowBody.innerHTML = detail.borrow_history.map(t => {
+          const canForceReturn = t.status === 'borrowed' || t.status === 'overdue';
+          const btn = canForceReturn
+            ? `<button class="btn btn-return small" data-action="force-return" data-id="${t.transaction_id}">Force Return</button>`
+            : '';
+          return `<tr>
           <td class="mono">${escapeHtml(t.isbn)}</td>
           <td>${t.borrow_date}</td>
           <td>${t.due_date}</td>
@@ -577,242 +991,243 @@
           <td>${statusBadge(t.status)}</td>
           <td>${btn}</td>
         </tr>`;
-      }).join('');
-    }
+        }).join('');
+      }
 
-    const resBody = document.querySelector('#table-user-reservations tbody');
-    if (!detail.reservations.length) {
-      resBody.innerHTML = `<tr><td colspan="3" class="empty">Резерваций нет</td></tr>`;
-    } else {
-      resBody.innerHTML = detail.reservations.map(r => `
+      const resBody = document.querySelector('#table-user-reservations tbody');
+      if (!detail.reservations.length) {
+        resBody.innerHTML = `<tr><td colspan="3" class="empty">No reservations</td></tr>`;
+      } else {
+        resBody.innerHTML = detail.reservations.map(r => `
         <tr>
           <td class="mono">${escapeHtml(r.isbn)}</td>
           <td>${r.reservation_date}</td>
           <td>${statusBadge(r.status)}</td>
         </tr>
       `).join('');
+      }
+
+      document.getElementById('user-detail').classList.remove('hidden');
     }
 
-    document.getElementById('user-detail').classList.remove('hidden');
-  }
-
-  async function openUserDetail(userId) {
-    selectedUserId = userId;
-    const detail = await api(`/users/${userId}`);
-    renderUserDetail(detail);
-  }
-
-  // ---------- data loading ----------
-  async function refreshAll(searchTerm) {
-    if (searchTerm !== undefined) currentSearch = searchTerm;
-    const [books, history, reservations] = await Promise.all([
-      api(`/books?search=${encodeURIComponent(currentSearch)}&limit=200`),
-      api('/borrow/history'),
-      api('/reservations/my'),
-    ]);
-
-    books.items.forEach(b => { bookTitleCache[b.isbn] = b; });
-    currentBooksList = books.items;
-
-    historyList = history.items;
-    myBorrowedIsbns = new Set(
-      history.items.filter(t => t.status === 'borrowed' || t.status === 'overdue').map(t => t.isbn)
-    );
-
-    reservationsList = reservations.items;
-    myPendingReservationByIsbn = new Map(
-      reservations.items.filter(r => r.status === 'pending').map(r => [r.isbn, r.reservation_id])
-    );
-
-    renderBooksGrid();
-    renderHistoryTable();
-    renderReservationsTable();
-  }
-
-  // ---------- auth ----------
-  async function afterLogin() {
-    currentUser = await api('/auth/me');
-    document.getElementById('who-name').textContent = currentUser.full_name;
-    document.getElementById('who-role').textContent = currentUser.role;
-    document.getElementById('admin-add').classList.toggle('hidden', !isStaff());
-    document.getElementById('nav-users').classList.toggle('hidden', !isAdmin());
-    showView('app');
-    showPanel('catalog');
-    await refreshAll('');
-  }
-
-  document.getElementById('form-login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const data = await api('/auth/login', {
-        method: 'POST',
-        auth: false,
-        body: { email: val('login-email'), password: val('login-password') },
-      });
-      token = data.access_token;
-      await afterLogin();
-      toast('Добро пожаловать!');
-    } catch (err) {
-      toast(err.message, 'err');
+    async function openUserDetail(userId) {
+      selectedUserId = userId;
+      const detail = await api(`/users/${userId}`);
+      renderUserDetail(detail);
     }
-  });
 
-  document.getElementById('form-register').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await api('/auth/register', {
-        method: 'POST',
-        auth: false,
-        body: {
-          full_name: val('reg-name'),
-          email: val('reg-email'),
-          password: val('reg-password'),
-        },
-      });
-      toast('Регистрация прошла успешно — теперь войдите');
-      e.target.reset();
+    // ---------- data loading ----------
+    async function refreshAll(searchTerm) {
+      if (searchTerm !== undefined) currentSearch = searchTerm;
+      const [books, history, reservations] = await Promise.all([
+        api(`/books?search=${encodeURIComponent(currentSearch)}&limit=200`),
+        api('/borrow/history'),
+        api('/reservations/my'),
+      ]);
+
+      books.items.forEach(b => { bookTitleCache[b.isbn] = b; });
+      currentBooksList = books.items;
+
+      historyList = history.items;
+      myBorrowedIsbns = new Set(
+        history.items.filter(t => t.status === 'borrowed' || t.status === 'overdue').map(t => t.isbn)
+      );
+
+      reservationsList = reservations.items;
+      myPendingReservationByIsbn = new Map(
+        reservations.items.filter(r => r.status === 'pending').map(r => [r.isbn, r.reservation_id])
+      );
+
+      renderBooksGrid();
+      renderHistoryTable();
+      renderReservationsTable();
+    }
+
+    // ---------- auth ----------
+    async function afterLogin() {
+      currentUser = await api('/auth/me');
+      document.getElementById('who-name').textContent = currentUser.full_name;
+      document.getElementById('who-role').textContent = currentUser.role;
+      document.getElementById('admin-add').classList.toggle('hidden', !isStaff());
+      document.getElementById('nav-users').classList.toggle('hidden', !isAdmin());
+      showView('app');
+      showPanel('catalog');
+      await refreshAll('');
+    }
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const data = await api('/auth/login', {
+          method: 'POST',
+          auth: false,
+          body: { email: val('login-email'), password: val('login-password') },
+        });
+        token = data.access_token;
+        await afterLogin();
+        toast('Welcome back!');
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    document.getElementById('form-register').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/auth/register', {
+          method: 'POST',
+          auth: false,
+          body: {
+            full_name: val('reg-name'),
+            email: val('reg-email'),
+            password: val('reg-password'),
+          },
+        });
+        toast('Account created — please sign in');
+        e.target.reset();
+        switchTab('login');
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      token = null;
+      currentUser = null;
+      bookTitleCache = {};
+      currentBooksList = [];
+      historyList = [];
+      reservationsList = [];
+      myBorrowedIsbns = new Set();
+      myPendingReservationByIsbn = new Map();
+      document.getElementById('form-login').reset();
       switchTab('login');
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
+      showView('auth');
+    });
 
-  document.getElementById('btn-logout').addEventListener('click', () => {
-    token = null;
-    currentUser = null;
-    bookTitleCache = {};
-    currentBooksList = [];
-    historyList = [];
-    reservationsList = [];
-    myBorrowedIsbns = new Set();
-    myPendingReservationByIsbn = new Map();
-    document.getElementById('form-login').reset();
-    switchTab('login');
-    showView('auth');
-  });
-
-  // ---------- nav / tabs ----------
-  document.getElementById('tab-login').addEventListener('click', () => switchTab('login'));
-  document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
-  document.getElementById('nav-catalog').addEventListener('click', () => showPanel('catalog'));
-  document.getElementById('nav-activity').addEventListener('click', () => showPanel('activity'));
-  document.getElementById('nav-users').addEventListener('click', async () => {
-    showPanel('users');
-    try {
-      await loadUsers();
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
-
-  // ---------- search ----------
-  document.getElementById('form-search').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await refreshAll(document.getElementById('search-input').value.trim());
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
-
-  // ---------- add book (staff only) ----------
-  document.getElementById('form-add-book').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await api('/books', {
-        method: 'POST',
-        body: {
-          isbn: val('add-isbn'),
-          title: val('add-title'),
-          author: val('add-author') || null,
-          publisher: val('add-publisher') || null,
-          year: numOrNull('add-year'),
-          total_copies: Number(val('add-copies')) || 1,
-        },
-      });
-      toast('Книга добавлена');
-      e.target.reset();
-      document.getElementById('add-copies').value = 1;
-      await refreshAll();
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
-
-  // ---------- admin: edit user ----------
-  document.getElementById('form-edit-user').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!selectedUserId) return;
-    try {
-      const payload = {
-        full_name: val('edit-user-name'),
-        email: val('edit-user-email'),
-        role: document.getElementById('edit-user-role').value,
-      };
-      const newPassword = val('edit-user-password');
-      if (newPassword) payload.password = newPassword;
-
-      await api(`/users/${selectedUserId}`, { method: 'PUT', body: payload });
-      toast('Данные пользователя обновлены');
-      document.getElementById('edit-user-password').value = '';
-      await loadUsers();
-      if (currentUser && currentUser.user_id === selectedUserId) {
-        await afterLogin(); // если admin поменял свою же роль/данные — обновим шапку
-      }
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
-
-  document.getElementById('btn-close-user-detail').addEventListener('click', () => {
-    document.getElementById('user-detail').classList.add('hidden');
-    selectedUserId = null;
-  });
-
-  // ---------- delegated actions: borrow / return / reserve / cancel / delete ----------
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const action = btn.dataset.action;
-    try {
-      if (action === 'borrow') {
-        await api('/borrow', { method: 'POST', body: { isbn: btn.dataset.isbn } });
-        toast('Книга выдана');
-        await refreshAll();
-      } else if (action === 'return') {
-        await api('/return', { method: 'POST', body: { isbn: btn.dataset.isbn } });
-        toast('Книга возвращена');
-        await refreshAll();
-      } else if (action === 'reserve') {
-        await api('/reservations', { method: 'POST', body: { isbn: btn.dataset.isbn } });
-        toast('Резервация создана');
-        await refreshAll();
-      } else if (action === 'cancel-reservation') {
-        const id = btn.dataset.id || myPendingReservationByIsbn.get(btn.dataset.isbn);
-        await api(`/reservations/${id}/cancel`, { method: 'POST' });
-        toast('Резервация отменена');
-        await refreshAll();
-      } else if (action === 'delete') {
-        if (!confirm('Удалить книгу из каталога?')) return;
-        await api(`/books/${encodeURIComponent(btn.dataset.isbn)}`, { method: 'DELETE' });
-        toast('Книга удалена');
-        await refreshAll();
-      } else if (action === 'open-user') {
-        await openUserDetail(Number(btn.dataset.id));
-      } else if (action === 'force-return') {
-        if (!confirm('Принудительно отметить эту книгу возвращённой?')) return;
-        await api(`/borrow/${btn.dataset.id}/force-return`, { method: 'POST' });
-        toast('Книга принята от пользователя');
-        await openUserDetail(selectedUserId);
+    // ---------- nav / tabs ----------
+    document.getElementById('tab-login').addEventListener('click', () => switchTab('login'));
+    document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
+    document.getElementById('nav-catalog').addEventListener('click', () => showPanel('catalog'));
+    document.getElementById('nav-activity').addEventListener('click', () => showPanel('activity'));
+    document.getElementById('nav-users').addEventListener('click', async () => {
+      showPanel('users');
+      try {
         await loadUsers();
+      } catch (err) {
+        toast(err.message, 'err');
       }
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-  });
+    });
 
-  // ---------- initial state ----------
-  showView('auth');
-</script>
+    // ---------- search ----------
+    document.getElementById('form-search').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await refreshAll(document.getElementById('search-input').value.trim());
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    // ---------- add book (staff only) ----------
+    document.getElementById('form-add-book').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/books', {
+          method: 'POST',
+          body: {
+            isbn: val('add-isbn'),
+            title: val('add-title'),
+            author: val('add-author') || null,
+            publisher: val('add-publisher') || null,
+            year: numOrNull('add-year'),
+            total_copies: Number(val('add-copies')) || 1,
+          },
+        });
+        toast('Book added successfully');
+        e.target.reset();
+        document.getElementById('add-copies').value = 1;
+        await refreshAll();
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    // ---------- admin: edit user ----------
+    document.getElementById('form-edit-user').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedUserId) return;
+      try {
+        const payload = {
+          full_name: val('edit-user-name'),
+          email: val('edit-user-email'),
+          role: document.getElementById('edit-user-role').value,
+        };
+        const newPassword = val('edit-user-password');
+        if (newPassword) payload.password = newPassword;
+
+        await api(`/users/${selectedUserId}`, { method: 'PUT', body: payload });
+        toast('User updated successfully');
+        document.getElementById('edit-user-password').value = '';
+        await loadUsers();
+        if (currentUser && currentUser.user_id === selectedUserId) {
+          await afterLogin(); // if admin changed their own role/data — refresh the header
+        }
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    document.getElementById('btn-close-user-detail').addEventListener('click', () => {
+      document.getElementById('user-detail').classList.add('hidden');
+      selectedUserId = null;
+    });
+
+    // ---------- delegated actions: borrow / return / reserve / cancel / delete ----------
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      try {
+        if (action === 'borrow') {
+          await api('/borrow', { method: 'POST', body: { isbn: btn.dataset.isbn } });
+          toast('Book borrowed successfully');
+          await refreshAll();
+        } else if (action === 'return') {
+          await api('/return', { method: 'POST', body: { isbn: btn.dataset.isbn } });
+          toast('Book returned successfully');
+          await refreshAll();
+        } else if (action === 'reserve') {
+          await api('/reservations', { method: 'POST', body: { isbn: btn.dataset.isbn } });
+          toast('Reservation created');
+          await refreshAll();
+        } else if (action === 'cancel-reservation') {
+          const id = btn.dataset.id || myPendingReservationByIsbn.get(btn.dataset.isbn);
+          await api(`/reservations/${id}/cancel`, { method: 'POST' });
+          toast('Reservation cancelled');
+          await refreshAll();
+        } else if (action === 'delete') {
+          if (!confirm('Remove this book from the catalogue?')) return;
+          await api(`/books/${encodeURIComponent(btn.dataset.isbn)}`, { method: 'DELETE' });
+          toast('Book deleted');
+          await refreshAll();
+        } else if (action === 'open-user') {
+          await openUserDetail(Number(btn.dataset.id));
+        } else if (action === 'force-return') {
+          if (!confirm('Mark this book as returned by force?')) return;
+          await api(`/borrow/${btn.dataset.id}/force-return`, { method: 'POST' });
+          toast('Book marked as returned');
+          await openUserDetail(selectedUserId);
+          await loadUsers();
+        }
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+
+    // ---------- initial state ----------
+    showView('auth');
+  </script>
 </body>
+
 </html>

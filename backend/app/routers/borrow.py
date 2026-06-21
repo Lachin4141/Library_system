@@ -1,18 +1,18 @@
 """
-Эндпоинты выдачи и возврата книг (borrow.py).
-
-POST /borrow                          — взять книгу (текущий авторизованный пользователь)
-POST /return                          — вернуть книгу
-GET  /borrow/history                  — личная история транзакций текущего пользователя
-POST /borrow/{transaction_id}/force-return — принудительный возврат (Administrator)
-PATCH /borrow/{transaction_id}        — ручная правка записи о выдаче (Administrator)
+Book borrowing and return endpoints (borrow.py).
+ 
+POST /borrow                          — borrow a book (current authenticated user)
+POST /return                          — return a book
+GET  /borrow/history                  — current user's personal transaction history
+POST /borrow/{transaction_id}/force-return — forced return (Administrator)
+PATCH /borrow/{transaction_id}        — manual edit of a borrow record (Administrator)
 """
-
+ 
 from datetime import date, timedelta
-
+ 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+ 
 from database import get_db
 from models import Book, BorrowTransaction, BorrowStatus, User, RoleEnum
 from schemas import (
@@ -24,31 +24,31 @@ from schemas import (
 )
 from auth.dependencies import get_current_user, require_role
 from routers.reservations import fulfill_oldest_pending_reservation
-
+ 
 router = APIRouter()
-
-# Срок выдачи книги — 14 дней. При желании вынести в переменную окружения.
+ 
+# Loan period — 14 days. Move to an environment variable if needed.
 LOAN_PERIOD_DAYS = 14
-
-
+ 
+ 
 @router.post("/borrow", response_model=BorrowTransactionOut, status_code=status.HTTP_201_CREATED)
 def borrow_book(
     payload: BorrowRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Выдать книгу текущему пользователю, если есть доступные экземпляры."""
+    """Issue a book to the current user, if copies are available."""
     book = db.query(Book).filter(Book.isbn == payload.isbn).first()
     if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+ 
     if book.available_copies <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Нет доступных экземпляров этой книги. Создайте резервацию.",
+            detail="No copies of this book are available. Create a reservation.",
         )
-
-    # Не даём пользователю взять одну и ту же книгу второй раз, пока не вернул первую
+ 
+    # Don't let a user borrow the same book a second time before returning the first
     already_borrowed = (
         db.query(BorrowTransaction)
         .filter(
@@ -61,9 +61,9 @@ def borrow_book(
     if already_borrowed:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Вы уже взяли эту книгу и ещё не вернули её",
+            detail="You've already borrowed this book and haven't returned it yet",
         )
-
+ 
     today = date.today()
     transaction = BorrowTransaction(
         user_id=current_user.user_id,
@@ -73,37 +73,37 @@ def borrow_book(
         status=BorrowStatus.borrowed,
     )
     book.available_copies -= 1
-
+ 
     db.add(transaction)
     db.commit()
     db.refresh(transaction)
     return transaction
-
-
+ 
+ 
 def _do_return(db: Session, transaction: BorrowTransaction) -> BorrowTransaction:
-    """Общая логика возврата: используется и self-service /return, и admin force-return."""
+    """Shared return logic: used by both the self-service /return and admin force-return."""
     transaction.return_date = date.today()
     transaction.status = BorrowStatus.returned
-
+ 
     book = db.query(Book).filter(Book.isbn == transaction.isbn).first()
     if book:
-        # min() на случай, если total_copies когда-то уменьшали вручную
+        # min() in case total_copies was ever reduced manually
         book.available_copies = min(book.total_copies, book.available_copies + 1)
-        # Книга снова доступна — если есть очередь резерваций, закрываем самую старую pending.
+        # The book is available again — if there's a reservation queue, close the oldest pending one.
         fulfill_oldest_pending_reservation(db, transaction.isbn)
-
+ 
     db.commit()
     db.refresh(transaction)
     return transaction
-
-
+ 
+ 
 @router.post("/return", response_model=BorrowTransactionOut)
 def return_book(
     payload: ReturnRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Вернуть книгу: закрывает самую свежую активную выдачу этой книги у пользователя."""
+    """Return a book: closes the user's most recent active loan of this book."""
     transaction = (
         db.query(BorrowTransaction)
         .filter(
@@ -114,22 +114,22 @@ def return_book(
         .order_by(BorrowTransaction.borrow_date.desc())
         .first()
     )
-
+ 
     if not transaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активная выдача этой книги у вас не найдена",
+            detail="No active loan of this book was found for you",
         )
-
+ 
     return _do_return(db, transaction)
-
-
+ 
+ 
 @router.get("/borrow/history", response_model=BorrowHistoryOut)
 def my_borrow_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """История всех транзакций (текущих и прошлых) текущего пользователя."""
+    """All transactions (current and past) for the current user."""
     items = (
         db.query(BorrowTransaction)
         .filter(BorrowTransaction.user_id == current_user.user_id)
@@ -137,29 +137,29 @@ def my_borrow_history(
         .all()
     )
     return BorrowHistoryOut(total=len(items), items=items)
-
-
+ 
+ 
 @router.post(
     "/borrow/{transaction_id}/force-return",
     response_model=BorrowTransactionOut,
     dependencies=[Depends(require_role(RoleEnum.administrator))],
 )
 def force_return_book(transaction_id: int, db: Session = Depends(get_db)):
-    """Принудительный возврат книги администратором (например, читатель недоступен / не вернул вовремя)."""
+    """Forced return of a book by an administrator (e.g. the reader is unreachable / didn't return it on time)."""
     transaction = (
         db.query(BorrowTransaction)
         .filter(BorrowTransaction.transaction_id == transaction_id)
         .first()
     )
     if not transaction:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Транзакция не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+ 
     if transaction.status == BorrowStatus.returned:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Эта книга уже возвращена")
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This book has already been returned")
+ 
     return _do_return(db, transaction)
-
-
+ 
+ 
 @router.patch(
     "/borrow/{transaction_id}",
     response_model=BorrowTransactionOut,
@@ -170,19 +170,19 @@ def admin_edit_transaction(
     payload: AdminTransactionUpdate,
     db: Session = Depends(get_db),
 ):
-    """Ручная правка записи о выдаче (статус/сроки) — для исправления ошибок в статистике."""
+    """Manual edit of a borrow record (status/dates) — for fixing errors in the statistics."""
     transaction = (
         db.query(BorrowTransaction)
         .filter(BorrowTransaction.transaction_id == transaction_id)
         .first()
     )
     if not transaction:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Транзакция не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+ 
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(transaction, field, value)
-
+ 
     db.commit()
     db.refresh(transaction)
     return transaction

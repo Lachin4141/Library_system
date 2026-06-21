@@ -1,47 +1,47 @@
 """
-Эндпоинты резервирования книг (reservations.py).
-
-POST /reservations                  — создать резервацию (доступно, только если книги нет в наличии)
-GET  /reservations/my               — личные резервации текущего пользователя (любой статус)
-POST /reservations/{id}/cancel      — отменить свою резервацию (только пока статус pending)
-
-Плюс служебная функция fulfill_oldest_pending_reservation(), которую вызывает
-return_book() из routers/borrow.py при возврате книги: самая старая pending-резервация
-на этот ISBN автоматически переводится в fulfilled.
-
-Кладите этот файл в backend/app/routers/reservations.py
+Book reservation endpoints (reservations.py).
+ 
+POST /reservations                  — create a reservation (only available when the book is out of stock)
+GET  /reservations/my               — current user's personal reservations (any status)
+POST /reservations/{id}/cancel      — cancel your own reservation (only while status is pending)
+ 
+Plus the helper fulfill_oldest_pending_reservation(), which is called by
+return_book() in routers/borrow.py when a book is returned: the oldest pending
+reservation for that ISBN is automatically switched to fulfilled.
+ 
+Place this file at backend/app/routers/reservations.py
 """
-
+ 
 from datetime import date
-
+ 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+ 
 from database import get_db
 from models import Book, Reservation, ReservationStatus, User
 from schemas import ReservationRequest, ReservationOut, ReservationListOut
 from auth.dependencies import get_current_user
-
+ 
 router = APIRouter()
-
-
+ 
+ 
 @router.post("/reservations", response_model=ReservationOut, status_code=status.HTTP_201_CREATED)
 def create_reservation(
     payload: ReservationRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Создать резервацию книги. Доступно только если все экземпляры сейчас выданы."""
+    """Create a book reservation. Only available when all copies are currently checked out."""
     book = db.query(Book).filter(Book.isbn == payload.isbn).first()
     if not book:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книга не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+ 
     if book.available_copies > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Книга сейчас доступна — оформите выдачу через /borrow, резервация не нужна",
+            detail="The book is currently available — borrow it via /borrow, a reservation isn't needed",
         )
-
+ 
     duplicate = (
         db.query(Reservation)
         .filter(
@@ -54,9 +54,9 @@ def create_reservation(
     if duplicate:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="У вас уже есть активная резервация на эту книгу",
+            detail="You already have an active reservation for this book",
         )
-
+ 
     reservation = Reservation(
         user_id=current_user.user_id,
         isbn=payload.isbn,
@@ -67,14 +67,14 @@ def create_reservation(
     db.commit()
     db.refresh(reservation)
     return reservation
-
-
+ 
+ 
 @router.get("/reservations/my", response_model=ReservationListOut)
 def my_reservations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Все резервации текущего пользователя — pending, fulfilled и cancelled."""
+    """All of the current user's reservations — pending, fulfilled, and cancelled."""
     items = (
         db.query(Reservation)
         .filter(Reservation.user_id == current_user.user_id)
@@ -82,15 +82,15 @@ def my_reservations(
         .all()
     )
     return ReservationListOut(total=len(items), items=items)
-
-
+ 
+ 
 @router.post("/reservations/{reservation_id}/cancel", response_model=ReservationOut)
 def cancel_reservation(
     reservation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Отменить собственную резервацию. Отменить можно только резервацию со статусом pending."""
+    """Cancel your own reservation. Only a reservation with status pending can be cancelled."""
     reservation = (
         db.query(Reservation)
         .filter(
@@ -100,31 +100,31 @@ def cancel_reservation(
         .first()
     )
     if not reservation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Резервация не найдена")
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservation not found")
+ 
     if reservation.status != ReservationStatus.pending:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Нельзя отменить резервацию со статусом '{reservation.status.value}'",
+            detail=f"Cannot cancel a reservation with status '{reservation.status.value}'",
         )
-
+ 
     reservation.status = ReservationStatus.cancelled
     db.commit()
     db.refresh(reservation)
     return reservation
-
-
+ 
+ 
 def fulfill_oldest_pending_reservation(db: Session, isbn: str) -> Reservation | None:
     """
-    Помечает самую старую pending-резервацию на данный ISBN как fulfilled.
-
-    Вызывается из borrow.py -> return_book() при возврате книги: это сигнал
-    "книга снова доступна, и по очереди она в первую очередь предназначена
-    этому пользователю". Сама выдача всё равно оформляется обычным POST /borrow —
-    эта функция только меняет статус резервации, не трогает available_copies
-    (это уже делает return_book).
-
-    Возвращает обновлённую резервацию, либо None, если очереди не было.
+    Marks the oldest pending reservation for the given ISBN as fulfilled.
+ 
+    Called from borrow.py -> return_book() when a book is returned: this is a signal
+    that "the book is available again, and by queue order it's earmarked first for
+    this user." The actual loan is still created via a normal POST /borrow —
+    this function only changes the reservation's status, it doesn't touch
+    available_copies (return_book already does that).
+ 
+    Returns the updated reservation, or None if there was no queue.
     """
     reservation = (
         db.query(Reservation)
