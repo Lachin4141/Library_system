@@ -125,3 +125,66 @@ class ReservationOut(BaseModel):
 class ReservationListOut(BaseModel):
     total: int
     items: list[ReservationOut]
+    
+# ---------- Reports ----------
+
+class MostBorrowedItem(BaseModel):
+    isbn: str
+    title: str
+    borrow_count: int
+
+
+class MostBorrowedListOut(BaseModel):
+    items: list[MostBorrowedItem]
+
+
+class ActiveUserItem(BaseModel):
+    user_id: int
+    full_name: str
+    email: EmailStr
+    borrow_count: int
+
+
+class ActiveUsersListOut(BaseModel):
+    items: list[ActiveUserItem]
+
+
+class CurrentlyBorrowedItem(BaseModel):
+    transaction_id: int
+    user_id: int
+    user_full_name: str
+    isbn: str
+    book_title: str
+    borrow_date: date
+    due_date: date
+
+
+class CurrentlyBorrowedListOut(BaseModel):
+    total: int
+    items: list[CurrentlyBorrowedItem]
+
+
+class OverdueItem(BaseModel):
+    transaction_id: int
+    user_id: int
+    user_full_name: str
+    isbn: str
+    book_title: str
+    borrow_date: date
+    due_date: date
+    days_overdue: int
+
+
+class OverdueListOut(BaseModel):
+    total: int
+    items: list[OverdueItem]
+
+
+class MonthlyStatItem(BaseModel):
+    year: int
+    month: int
+    borrow_count: int
+
+
+class MonthlyStatsListOut(BaseModel):
+    items: list[MonthlyStatItem]
