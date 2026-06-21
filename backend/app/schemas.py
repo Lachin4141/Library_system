@@ -15,10 +15,8 @@ class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=255)
     email: EmailStr
     password: str = Field(..., min_length=6)
-    # По умолчанию — Student. На проде самостоятельный выбор роли Administrator/Librarian
-    # стоило бы убрать и назначать роль отдельно через уже существующего администратора,
-    # но для учебного проекта оставляем выбор открытым для удобства тестирования.
-    role: RoleEnum = RoleEnum.student
+    # Самостоятельная регистрация создаёт ТОЛЬКО Student. Роль Administrator/Librarian
+    # назначается отдельно — существующим администратором через PUT /users/{user_id}.
 
 
 class UserLogin(BaseModel):
@@ -188,3 +186,46 @@ class MonthlyStatItem(BaseModel):
 
 class MonthlyStatsListOut(BaseModel):
     items: list[MonthlyStatItem]
+
+
+# ---------- Admin: Users management ----------
+
+class UserListItem(BaseModel):
+    user_id: int
+    full_name: str
+    email: EmailStr
+    role: RoleEnum
+    active_borrow_count: int
+    total_borrow_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class UserListOut(BaseModel):
+    total: int
+    items: list[UserListItem]
+
+
+class UserDetailOut(BaseModel):
+    user_id: int
+    full_name: str
+    email: EmailStr
+    role: RoleEnum
+    borrow_history: list[BorrowTransactionOut]
+    reservations: list[ReservationOut]
+
+
+class AdminUserUpdate(BaseModel):
+    """Все поля опциональны — admin меняет только то, что прислал."""
+    full_name: str | None = None
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=6)
+    role: RoleEnum | None = None
+
+
+class AdminTransactionUpdate(BaseModel):
+    """Ручная правка записи о выдаче — для исправления ошибок/статистики."""
+    status: BorrowStatus | None = None
+    due_date: date | None = None
+    return_date: date | None = None

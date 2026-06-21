@@ -242,13 +242,6 @@
         <label>Имя<input type="text" id="reg-name" required></label>
         <label>Email<input type="email" id="reg-email" required autocomplete="username"></label>
         <label>Пароль (мин. 6 символов)<input type="password" id="reg-password" minlength="6" required autocomplete="new-password"></label>
-        <label>Роль
-          <select id="reg-role">
-            <option value="student" selected>Student</option>
-            <option value="librarian">Librarian</option>
-            <option value="administrator">Administrator</option>
-          </select>
-        </label>
         <button type="submit" class="btn btn-brass full">Зарегистрироваться</button>
       </form>
     </div>
@@ -261,6 +254,7 @@
       <nav class="nav">
         <button id="nav-catalog" class="nav-btn active" type="button">Каталог</button>
         <button id="nav-activity" class="nav-btn" type="button">Моя активность</button>
+        <button id="nav-users" class="nav-btn hidden" type="button">Пользователи</button>
       </nav>
       <div class="who">
         <span id="who-name"></span>
@@ -310,6 +304,49 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <!-- Users panel (только Administrator) -->
+    <div id="panel-users" class="panel hidden">
+      <h2>Пользователи</h2>
+      <table class="table" id="table-users">
+        <thead>
+          <tr><th>Имя</th><th>Email</th><th>Роль</th><th>Книг сейчас / всего</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="user-detail" class="admin-box hidden" style="margin-top:24px;">
+        <h3 id="user-detail-title">Пользователь</h3>
+        <form id="form-edit-user" class="add-book-form">
+          <input type="text" id="edit-user-name" placeholder="Имя">
+          <input type="email" id="edit-user-email" placeholder="Email">
+          <input type="password" id="edit-user-password" placeholder="Новый пароль (необязательно)" autocomplete="new-password">
+          <select id="edit-user-role">
+            <option value="student">Student</option>
+            <option value="librarian">Librarian</option>
+            <option value="administrator">Administrator</option>
+          </select>
+          <button type="submit" class="btn btn-brass">Сохранить</button>
+          <button type="button" id="btn-close-user-detail" class="btn btn-ghost">Закрыть</button>
+        </form>
+
+        <h2>История выдач</h2>
+        <table class="table" id="table-user-borrow">
+          <thead>
+            <tr><th>ISBN</th><th>Выдана</th><th>Срок</th><th>Возвращена</th><th>Статус</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h2>Резервации</h2>
+        <table class="table" id="table-user-reservations">
+          <thead>
+            <tr><th>ISBN</th><th>Дата</th><th>Статус</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
 <script>
@@ -336,6 +373,7 @@
   function val(id) { return document.getElementById(id).value.trim(); }
   function numOrNull(id) { const v = val(id); return v ? Number(v) : null; }
   function isStaff() { return currentUser && (currentUser.role === 'administrator' || currentUser.role === 'librarian'); }
+  function isAdmin() { return currentUser && currentUser.role === 'administrator'; }
 
   function toast(msg, kind = 'ok') {
     const el = document.getElementById('toast');
@@ -393,8 +431,10 @@
   function showPanel(name) {
     document.getElementById('panel-catalog').classList.toggle('hidden', name !== 'catalog');
     document.getElementById('panel-activity').classList.toggle('hidden', name !== 'activity');
+    document.getElementById('panel-users').classList.toggle('hidden', name !== 'users');
     document.getElementById('nav-catalog').classList.toggle('active', name === 'catalog');
     document.getElementById('nav-activity').classList.toggle('active', name === 'activity');
+    document.getElementById('nav-users').classList.toggle('active', name === 'users');
   }
 
   // ---------- rendering ----------
@@ -481,6 +521,87 @@
     }).join('');
   }
 
+  // ---------- users (admin) ----------
+  let usersList = [];
+  let selectedUserId = null;
+
+  function userRoleBadge(role) {
+    const map = { administrator: 'badge-bad', librarian: 'badge-warn', student: 'badge-ok' };
+    return `<span class="badge ${map[role] || 'badge-muted'}">${role}</span>`;
+  }
+
+  function renderUsersTable() {
+    const tbody = document.querySelector('#table-users tbody');
+    if (!usersList.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">Пользователей нет</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = usersList.map(u => `
+      <tr>
+        <td>${escapeHtml(u.full_name)}</td>
+        <td class="mono">${escapeHtml(u.email)}</td>
+        <td>${userRoleBadge(u.role)}</td>
+        <td>${u.active_borrow_count} / ${u.total_borrow_count}</td>
+        <td><button class="btn btn-ghost small" data-action="open-user" data-id="${u.user_id}">Открыть</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadUsers() {
+    const data = await api('/users');
+    usersList = data.items;
+    renderUsersTable();
+  }
+
+  function renderUserDetail(detail) {
+    document.getElementById('user-detail-title').textContent = `Пользователь: ${detail.full_name}`;
+    document.getElementById('edit-user-name').value = detail.full_name;
+    document.getElementById('edit-user-email').value = detail.email;
+    document.getElementById('edit-user-password').value = '';
+    document.getElementById('edit-user-role').value = detail.role;
+
+    const borrowBody = document.querySelector('#table-user-borrow tbody');
+    if (!detail.borrow_history.length) {
+      borrowBody.innerHTML = `<tr><td colspan="6" class="empty">Выдач не было</td></tr>`;
+    } else {
+      borrowBody.innerHTML = detail.borrow_history.map(t => {
+        const canForceReturn = t.status === 'borrowed' || t.status === 'overdue';
+        const btn = canForceReturn
+          ? `<button class="btn btn-return small" data-action="force-return" data-id="${t.transaction_id}">Забрать книгу</button>`
+          : '';
+        return `<tr>
+          <td class="mono">${escapeHtml(t.isbn)}</td>
+          <td>${t.borrow_date}</td>
+          <td>${t.due_date}</td>
+          <td>${t.return_date || '—'}</td>
+          <td>${statusBadge(t.status)}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    const resBody = document.querySelector('#table-user-reservations tbody');
+    if (!detail.reservations.length) {
+      resBody.innerHTML = `<tr><td colspan="3" class="empty">Резерваций нет</td></tr>`;
+    } else {
+      resBody.innerHTML = detail.reservations.map(r => `
+        <tr>
+          <td class="mono">${escapeHtml(r.isbn)}</td>
+          <td>${r.reservation_date}</td>
+          <td>${statusBadge(r.status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('user-detail').classList.remove('hidden');
+  }
+
+  async function openUserDetail(userId) {
+    selectedUserId = userId;
+    const detail = await api(`/users/${userId}`);
+    renderUserDetail(detail);
+  }
+
   // ---------- data loading ----------
   async function refreshAll(searchTerm) {
     if (searchTerm !== undefined) currentSearch = searchTerm;
@@ -514,6 +635,7 @@
     document.getElementById('who-name').textContent = currentUser.full_name;
     document.getElementById('who-role').textContent = currentUser.role;
     document.getElementById('admin-add').classList.toggle('hidden', !isStaff());
+    document.getElementById('nav-users').classList.toggle('hidden', !isAdmin());
     showView('app');
     showPanel('catalog');
     await refreshAll('');
@@ -545,7 +667,6 @@
           full_name: val('reg-name'),
           email: val('reg-email'),
           password: val('reg-password'),
-          role: document.getElementById('reg-role').value,
         },
       });
       toast('Регистрация прошла успешно — теперь войдите');
@@ -575,6 +696,14 @@
   document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
   document.getElementById('nav-catalog').addEventListener('click', () => showPanel('catalog'));
   document.getElementById('nav-activity').addEventListener('click', () => showPanel('activity'));
+  document.getElementById('nav-users').addEventListener('click', async () => {
+    showPanel('users');
+    try {
+      await loadUsers();
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  });
 
   // ---------- search ----------
   document.getElementById('form-search').addEventListener('submit', async (e) => {
@@ -610,6 +739,36 @@
     }
   });
 
+  // ---------- admin: edit user ----------
+  document.getElementById('form-edit-user').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedUserId) return;
+    try {
+      const payload = {
+        full_name: val('edit-user-name'),
+        email: val('edit-user-email'),
+        role: document.getElementById('edit-user-role').value,
+      };
+      const newPassword = val('edit-user-password');
+      if (newPassword) payload.password = newPassword;
+
+      await api(`/users/${selectedUserId}`, { method: 'PUT', body: payload });
+      toast('Данные пользователя обновлены');
+      document.getElementById('edit-user-password').value = '';
+      await loadUsers();
+      if (currentUser && currentUser.user_id === selectedUserId) {
+        await afterLogin(); // если admin поменял свою же роль/данные — обновим шапку
+      }
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+  });
+
+  document.getElementById('btn-close-user-detail').addEventListener('click', () => {
+    document.getElementById('user-detail').classList.add('hidden');
+    selectedUserId = null;
+  });
+
   // ---------- delegated actions: borrow / return / reserve / cancel / delete ----------
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-action]');
@@ -638,6 +797,14 @@
         await api(`/books/${encodeURIComponent(btn.dataset.isbn)}`, { method: 'DELETE' });
         toast('Книга удалена');
         await refreshAll();
+      } else if (action === 'open-user') {
+        await openUserDetail(Number(btn.dataset.id));
+      } else if (action === 'force-return') {
+        if (!confirm('Принудительно отметить эту книгу возвращённой?')) return;
+        await api(`/borrow/${btn.dataset.id}/force-return`, { method: 'POST' });
+        toast('Книга принята от пользователя');
+        await openUserDetail(selectedUserId);
+        await loadUsers();
       }
     } catch (err) {
       toast(err.message, 'err');

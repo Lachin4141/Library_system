@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import User, RoleEnum
 from schemas import UserRegister, UserLogin, UserOut, Token
 from auth.security import hash_password, verify_password, create_access_token
 from auth.dependencies import get_current_user
@@ -28,7 +28,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         full_name=payload.full_name,
         email=payload.email,
         password_hash=hash_password(payload.password),
-        role=payload.role,
+        role=RoleEnum.student,  # самостоятельная регистрация — всегда Student
     )
     db.add(user)
     db.commit()

@@ -17,6 +17,7 @@ from routers import books as books_router
 from routers import borrow as borrow_router
 from routers import reservations as reservations_router
 from routers import reports as reports_router
+from routers import users as users_router
 
 app = FastAPI(
     title="Library Management System API",
@@ -56,8 +57,4 @@ app.include_router(books_router.router, prefix="/books", tags=["books"])
 app.include_router(borrow_router.router, tags=["borrow"])
 app.include_router(reservations_router.router, tags=["reservations"])
 app.include_router(reports_router.router, tags=["reports"])
-
-# from routers import borrow, reservations, reports
-# app.include_router(borrow.router, tags=["borrow"])
-# app.include_router(reservations.router, prefix="/reservations", tags=["reservations"])
-# app.include_router(reports.router, prefix="/reports", tags=["reports"])
+app.include_router(users_router.router, prefix="/users", tags=["users"])
