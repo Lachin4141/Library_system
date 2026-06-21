@@ -6,10 +6,18 @@
 """
 
 import sys
-import os
+from pathlib import Path
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "app"))
+# Абсолютный путь к backend/app, независимо от того, откуда запущен скрипт.
+APP_DIR = (Path(__file__).resolve().parent.parent / "app")
+
+print(f"Ищу models.py и database.py в: {APP_DIR}")
+print(f"models.py существует: {(APP_DIR / 'models.py').exists()}")
+print(f"database.py существует: {(APP_DIR / 'database.py').exists()}")
+
+# insert(0, ...) — ставим путь в начало, чтобы он проверялся первым.
+sys.path.insert(0, str(APP_DIR))
 
 from database import Base, engine, SessionLocal  # noqa: E402
 from models import Book  # noqa: E402

@@ -8,10 +8,16 @@
 """
 
 import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./library.db")
+# Абсолютный путь: library.db всегда лежит рядом с этим файлом (backend/app/),
+# независимо от того, из какой папки запущена команда/скрипт.
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_SQLITE_PATH = BASE_DIR / "library.db"
+
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_SQLITE_PATH}")
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
